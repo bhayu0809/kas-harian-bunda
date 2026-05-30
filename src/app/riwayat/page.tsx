@@ -61,6 +61,8 @@ function RiwayatForm() {
   // Search & Filter state
   const [search, setSearch] = useState(initialQuery);
   const [activeFilter, setActiveFilter] = useState<"all" | "today" | "week" | "month">("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [limit, setLimit] = useState(10);
 
   // Sync state if URL query param changes
@@ -86,7 +88,12 @@ function RiwayatForm() {
 
     // 2. Date Filter matching
     const txDate = new Date(tx.date);
+    const txDateOnly = tx.date.substring(0, 10);
     const now = new Date();
+
+    if (dateFrom && txDateOnly < dateFrom) return false;
+    if (dateTo && txDateOnly > dateTo) return false;
+    if (dateFrom || dateTo) return true;
     
     if (activeFilter === "today") {
       return txDate.toDateString() === now.toDateString();
@@ -120,10 +127,18 @@ function RiwayatForm() {
   );
 
   const hasMore = filteredTransactions.length > limit;
+  const hasDateRange = Boolean(dateFrom || dateTo);
 
   const handleDelete = async (id: string, label: string) => {
     if (!confirm(`Hapus transaksi "${label}"? Tindakan ini tidak bisa dibatalkan.`)) return;
     await deleteTransaction(id);
+  };
+
+  const clearFilters = () => {
+    setActiveFilter("all");
+    setSearch("");
+    setDateFrom("");
+    setDateTo("");
   };
 
   return (
@@ -145,10 +160,52 @@ function RiwayatForm() {
         </div>
       </div>
 
+      {/* Date Range */}
+      <div className="bg-surface-container-lowest rounded-3xl p-4 md:p-5 shadow-soft border border-surface-container-low">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 sm:items-end">
+          <div className="flex flex-col gap-2">
+            <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Dari Tanggal</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setActiveFilter("all");
+              }}
+              className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Sampai Tanggal</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setActiveFilter("all");
+              }}
+              className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={clearFilters}
+            disabled={activeFilter === "all" && search === "" && !hasDateRange}
+            className="min-h-12 rounded-2xl bg-surface-container-high px-5 font-body text-xs font-bold text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Reset Filter
+          </button>
+        </div>
+      </div>
+
       {/* Filter Chips */}
       <div className="grid grid-cols-2 gap-3 sm:flex sm:overflow-x-auto sm:pb-4 sm:scrollbar-hide">
         <button
-          onClick={() => setActiveFilter("today")}
+          onClick={() => {
+            setActiveFilter("today");
+            setDateFrom("");
+            setDateTo("");
+          }}
           className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === "today"
               ? "bg-secondary text-on-secondary shadow-md scale-95"
@@ -158,7 +215,11 @@ function RiwayatForm() {
           Hari Ini
         </button>
         <button
-          onClick={() => setActiveFilter("week")}
+          onClick={() => {
+            setActiveFilter("week");
+            setDateFrom("");
+            setDateTo("");
+          }}
           className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === "week"
               ? "bg-secondary text-on-secondary shadow-md scale-95"
@@ -168,7 +229,11 @@ function RiwayatForm() {
           Minggu Ini
         </button>
         <button
-          onClick={() => setActiveFilter("month")}
+          onClick={() => {
+            setActiveFilter("month");
+            setDateFrom("");
+            setDateTo("");
+          }}
           className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === "month"
               ? "bg-secondary text-on-secondary shadow-md scale-95"
@@ -178,12 +243,9 @@ function RiwayatForm() {
           Bulan Ini
         </button>
         <button
-          onClick={() => {
-            setActiveFilter("all");
-            setSearch("");
-          }}
+          onClick={clearFilters}
           className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            activeFilter === "all" && search === ""
+            activeFilter === "all" && search === "" && !hasDateRange
               ? "bg-secondary text-on-secondary shadow-md scale-95"
               : "bg-surface-container-lowest text-on-surface-variant border border-surface-variant hover:bg-surface-container"
           }`}

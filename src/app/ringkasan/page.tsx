@@ -51,6 +51,12 @@ export default function RingkasanPage() {
     setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
   };
 
+  const handleMonthPicker = (value: string) => {
+    const [year, month] = value.split("-").map(Number);
+    if (!year || !month) return;
+    setSelectedDate(new Date(year, month - 1, 1));
+  };
+
   const monthNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -58,6 +64,7 @@ export default function RingkasanPage() {
 
   const currentMonthName = monthNames[selectedDate.getMonth()];
   const currentYear = selectedDate.getFullYear();
+  const selectedMonthValue = `${currentYear}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}`;
 
   // Filter transactions by selected month/year
   const monthlyTransactions = transactions.filter((tx) => {
@@ -146,6 +153,7 @@ export default function RingkasanPage() {
         
         {/* Month Selector & Insight */}
         <div className="flex flex-col gap-6 lg:flex-row lg:justify-between lg:items-end">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-xl w-full sm:w-fit border border-surface-container-high shadow-xs">
             <button
               onClick={handlePrevMonth}
@@ -162,6 +170,16 @@ export default function RingkasanPage() {
             >
               <span className="material-symbols-outlined">chevron_right</span>
             </button>
+          </div>
+            <label className="relative block w-full sm:w-44">
+              <span className="sr-only">Pilih bulan</span>
+              <input
+                type="month"
+                value={selectedMonthValue}
+                onChange={(e) => handleMonthPicker(e.target.value)}
+                className="w-full h-full min-h-12 rounded-xl border border-surface-container-high bg-surface-container-low px-4 font-body text-sm font-bold text-primary shadow-xs focus:outline-none focus:border-secondary"
+              />
+            </label>
           </div>
 
           {largestExpenseCategory ? (

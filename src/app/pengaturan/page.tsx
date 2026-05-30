@@ -327,21 +327,21 @@ export default function PengaturanPage() {
           </div>
         </section>
 
-        {/* Cadangan & Data */}
+        {/* Backup & Restore */}
         <section className={cardClass}>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
               <span className="material-symbols-outlined">database</span>
             </div>
-            <h3 className="font-headline text-lg font-bold text-primary">Cadangan & Ekspor Data</h3>
+            <h3 className="font-headline text-lg font-bold text-primary">Backup & Restore Data</h3>
           </div>
           <p className="font-body text-xs text-on-surface-variant mb-6">
-            Semua data tersimpan secara lokal (offline) di perangkat ini menggunakan SQLite.
+            Backup .db menyimpan data lengkap: transaksi, kategori, template, transaksi berulang, batas pengeluaran, PIN, dan pengaturan lokal lainnya.
           </p>
           <div className="flex flex-wrap gap-3">
             <button onClick={exportDb} className="min-h-12 w-full sm:w-auto px-5 bg-secondary text-on-secondary rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center">
               <span className="material-symbols-outlined text-[20px]">download</span>
-              Export Backup (.db)
+              Backup Data Lengkap (.db)
             </button>
             <button onClick={exportCsvData} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">table_view</span>
@@ -349,7 +349,7 @@ export default function PengaturanPage() {
             </button>
             <button onClick={() => fileRef.current?.click()} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">upload</span>
-              Import / Restore (.db)
+              Restore dari Backup (.db)
             </button>
             <input ref={fileRef} type="file" accept=".db,.sqlite,application/x-sqlite3" onChange={handleImport} className="hidden" />
             <button onClick={handleShowIntro} className={secondaryActionBtn}>
