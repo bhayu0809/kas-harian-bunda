@@ -12,10 +12,6 @@ const formatRupiah = (value: number) =>
 
 export default function PengaturanPage() {
   const {
-    savingsTarget,
-    savedAmount,
-    setSavingsTarget,
-    setSavedAmount,
     pinIsDefault,
     changePin,
     biometricAvailable,
@@ -35,8 +31,6 @@ export default function PengaturanPage() {
 
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  const [target, setTarget] = useState(savingsTarget);
-  const [saved, setSaved] = useState(savedAmount);
   const [budget, setBudget] = useState(monthlyBudget);
   const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -54,13 +48,6 @@ export default function PengaturanPage() {
     setNewPin("");
     setConfirmPin("");
     notify("PIN berhasil diperbarui.");
-  };
-
-  const handleSaveGoal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingsTarget(target);
-    setSavedAmount(saved);
-    notify("Target tabungan disimpan.");
   };
 
   const handleSaveBudget = async (e: React.FormEvent) => {
@@ -190,31 +177,6 @@ export default function PengaturanPage() {
               {biometricEnrolled ? "Nonaktifkan" : "Aktifkan"}
             </button>
           </div>
-        </section>
-
-        {/* Target Tabungan */}
-        <section className={cardClass}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
-              <span className="material-symbols-outlined">savings</span>
-            </div>
-            <h3 className="font-headline text-lg font-bold text-primary">Target Tabungan</h3>
-          </div>
-          <form onSubmit={handleSaveGoal} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Target ({formatRupiah(target)})</label>
-              <input type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} className={inputClass} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Terkumpul ({formatRupiah(saved)})</label>
-              <input type="number" value={saved} onChange={(e) => setSaved(Number(e.target.value))} className={inputClass} />
-            </div>
-            <div className="sm:col-span-2">
-              <button type="submit" className={primaryBtn}>
-                Simpan Target
-              </button>
-            </div>
-          </form>
         </section>
 
         {/* Anggaran Bulanan + Notifikasi */}

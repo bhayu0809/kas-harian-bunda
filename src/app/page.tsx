@@ -46,43 +46,45 @@ export default function DashboardPage() {
   const { 
     transactions, 
     categories, 
-    savingsTarget, 
-    savedAmount, 
-    setSavingsTarget, 
-    setSavedAmount 
+    monthlyBudget,
+    setMonthlyBudget,
   } = useApp();
   const router = useRouter();
 
-  // Dialog state for editing savings goal
-  const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [tempTarget, setTempTarget] = useState(savingsTarget);
-  const [tempSaved, setTempSaved] = useState(savedAmount);
+  // Dialog state for editing monthly budget
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [tempBudget, setTempBudget] = useState(monthlyBudget);
+
+  const now = new Date();
+  const monthTransactions = transactions.filter((t) => {
+    const date = new Date(t.date);
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  });
 
   // Calculate totals
-  const totalIncome = transactions
+  const totalIncome = monthTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
+  const totalExpense = monthTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const currentSaldo = totalIncome - totalExpense;
 
-  // Savings progress calculations (guard against an unset / zero target)
-  const progressPercent =
-    savingsTarget > 0
-      ? Math.min(Math.round((savedAmount / savingsTarget) * 100), 100)
+  // Monthly budget progress (guard against an unset / zero budget)
+  const budgetPercent =
+    monthlyBudget > 0
+      ? Math.min(Math.round((totalExpense / monthlyBudget) * 100), 100)
       : 0;
 
   // Get last 5 transactions
   const recentTransactions = transactions.slice(0, 5);
 
-  const handleSaveGoal = (e: React.FormEvent) => {
+  const handleSaveBudget = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavingsTarget(tempTarget);
-    setSavedAmount(tempSaved);
-    setIsEditingGoal(false);
+    setMonthlyBudget(tempBudget);
+    setIsEditingBudget(false);
   };
 
   return (
@@ -112,14 +114,13 @@ export default function DashboardPage() {
                 </div>
                 <button 
                   onClick={() => {
-                    setTempTarget(savingsTarget);
-                    setTempSaved(savedAmount);
-                    setIsEditingGoal(true);
+                    setTempBudget(monthlyBudget);
+                    setIsEditingBudget(true);
                   }}
                   className="text-xs text-secondary hover:underline flex items-center gap-1 font-body font-medium cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-sm">settings</span>
-                  Atur Target
+                  Atur Anggaran
                 </button>
               </div>
               <h2 className="font-headline text-3xl lg:text-5xl text-on-surface mt-2 font-bold tracking-tight break-words tabular-nums amount">
@@ -130,29 +131,29 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Savings Goal Info */}
+            {/* Monthly Budget Info */}
             <div className="mt-8 pt-6 border-t border-surface-variant flex flex-col sm:flex-row gap-4 sm:gap-8 relative z-10">
               <div className="shrink-0">
                 <p className="font-body text-xs text-on-surface-variant mb-1">
-                  Target Tabungan
+                  Anggaran Bulan Ini
                 </p>
                 <p className="font-headline text-xl font-bold text-secondary amount">
-                  {formatRupiah(savingsTarget)}
+                  {monthlyBudget > 0 ? formatRupiah(monthlyBudget) : "Belum diatur"}
                 </p>
               </div>
               <div className="flex-1 flex flex-col justify-center">
                 <div className="w-full bg-surface-container rounded-full h-2.5 mb-2 overflow-hidden">
                   <div
                     className="bg-secondary h-full rounded-full transition-all duration-500"
-                    style={{ width: `${progressPercent}%` }}
+                    style={{ width: `${budgetPercent}%` }}
                   />
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-body text-xs text-on-surface-variant">
-                    <span className="amount">{formatRupiah(savedAmount)}</span> terkumpul
+                    <span className="amount">{formatRupiah(totalExpense)}</span> terpakai
                   </span>
                   <span className="font-body text-xs font-semibold text-secondary">
-                    {progressPercent}% Tercapai
+                    {budgetPercent}% Digunakan
                   </span>
                 </div>
               </div>
@@ -375,34 +376,22 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* Goal Setter Modal Dialog */}
-      {isEditingGoal && (
+      {/* Monthly Budget Modal Dialog */}
+      {isEditingBudget && (
         <div className="fixed inset-0 z-50 bg-on-background/25 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-surface-container-lowest rounded-[24px] p-8 w-full max-w-[400px] shadow-lux flex flex-col">
             <h3 className="font-headline text-lg font-bold text-primary mb-6">
-              Pengaturan Target Tabungan
+              Pengaturan Anggaran Bulanan
             </h3>
-            <form onSubmit={handleSaveGoal} className="space-y-5">
+            <form onSubmit={handleSaveBudget} className="space-y-5">
               <div>
                 <label className="block font-body text-xs font-semibold text-on-surface-variant mb-2">
-                  Target Tabungan (Rupiah)
+                  Anggaran Bulanan (Rupiah)
                 </label>
                 <input
                   type="number"
-                  value={tempTarget}
-                  onChange={(e) => setTempTarget(Number(e.target.value))}
-                  className="w-full rounded-xl border border-surface-container-highest bg-surface-container-low p-4 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block font-body text-xs font-semibold text-on-surface-variant mb-2">
-                  Dana Terkumpul (Rupiah)
-                </label>
-                <input
-                  type="number"
-                  value={tempSaved}
-                  onChange={(e) => setTempSaved(Number(e.target.value))}
+                  value={tempBudget}
+                  onChange={(e) => setTempBudget(Number(e.target.value))}
                   className="w-full rounded-xl border border-surface-container-highest bg-surface-container-low p-4 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors"
                   required
                 />
@@ -410,7 +399,7 @@ export default function DashboardPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsEditingGoal(false)}
+                  onClick={() => setIsEditingBudget(false)}
                   className="flex-1 h-12 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-body text-sm font-semibold transition-colors cursor-pointer"
                 >
                   Batal
