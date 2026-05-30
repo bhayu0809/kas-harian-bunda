@@ -3,11 +3,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import * as repo from "@/lib/db/repo";
 import * as auth from "@/lib/auth/credentials";
+import * as autoBackup from "@/lib/backup/autoBackups";
 import { initDb, resetToDefaults } from "@/lib/db/sqlite";
 import { exportCsv, exportDbFile, importDbFile } from "@/lib/export/exporters";
 import { DEFAULT_DAILY_SPENDING_LIMIT, DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
 import { notificationPermission, requestNotificationPermission } from "@/lib/notify";
 import type {
+  AutoBackupFrequency,
+  AutoBackupSnapshot,
   Category,
   RecurringTransaction,
   Transaction,
@@ -17,6 +20,8 @@ import type {
 
 // Re-export domain types so existing pages keep importing them from here.
 export type {
+  AutoBackupFrequency,
+  AutoBackupSnapshot,
   Category,
   RecurringTransaction,
   Transaction,
@@ -49,13 +54,13 @@ interface AppContextType {
   addCategory: (c: Omit<Category, "id">) => Promise<void>;
   savingsTarget: number;
   savedAmount: number;
-  setSavingsTarget: (target: number) => void;
-  setSavedAmount: (amount: number) => void;
+  setSavingsTarget: (target: number) => Promise<void>;
+  setSavedAmount: (amount: number) => Promise<void>;
   // monthly budget alerts
   monthlyBudget: number;
-  setMonthlyBudget: (amount: number) => void;
+  setMonthlyBudget: (amount: number) => Promise<void>;
   dailySpendingLimit: number;
-  setDailySpendingLimit: (amount: number) => void;
+  setDailySpendingLimit: (amount: number) => Promise<void>;
   notifPermission: NotificationPermission | "unsupported";
   enableBudgetAlerts: () => Promise<boolean>;
   // security
@@ -69,6 +74,15 @@ interface AppContextType {
   exportDb: () => void;
   exportCsvData: () => void;
   importDb: (file: File) => Promise<void>;
+  autoBackups: AutoBackupSnapshot[];
+  autoBackupEnabled: boolean;
+  autoBackupFrequency: AutoBackupFrequency;
+  autoBackupLastRun: string | null;
+  setAutoBackupEnabled: (enabled: boolean) => Promise<void>;
+  setAutoBackupFrequency: (frequency: AutoBackupFrequency) => Promise<void>;
+  createAutoBackup: () => Promise<void>;
+  restoreAutoBackup: (id: string) => Promise<void>;
+  deleteAutoBackup: (id: string) => Promise<void>;
   resetData: () => Promise<void>;
   // privacy
   hideAmounts: boolean;
@@ -96,6 +110,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [monthlyBudget, setMonthlyBudgetState] = useState(0);
   const [dailySpendingLimit, setDailySpendingLimitState] = useState(DEFAULT_DAILY_SPENDING_LIMIT);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [autoBackups, setAutoBackups] = useState<AutoBackupSnapshot[]>([]);
+  const [autoBackupEnabledState, setAutoBackupEnabledState] = useState(false);
+  const [autoBackupFrequencyState, setAutoBackupFrequencyState] = useState<AutoBackupFrequency>(
+    autoBackup.DEFAULT_AUTO_BACKUP_FREQUENCY
+  );
+  const [autoBackupLastRunState, setAutoBackupLastRunState] = useState<string | null>(null);
 
   // Pull the current database state into React state.
   const refreshAll = useCallback(() => {
@@ -109,7 +129,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDailySpendingLimitState(Number(repo.getSetting("daily_spending_limit") ?? DEFAULT_DAILY_SPENDING_LIMIT));
     setPinIsDefault(auth.isPinDefault());
     setBiometricEnrolled(auth.isBiometricEnrolled());
+    setAutoBackupEnabledState(autoBackup.autoBackupEnabled());
+    setAutoBackupFrequencyState(autoBackup.autoBackupFrequency());
+    setAutoBackupLastRunState(autoBackup.autoBackupLastRun());
   }, []);
+
+  const refreshAutoBackups = useCallback(async () => {
+    setAutoBackups(await autoBackup.listAutoBackups());
+    setAutoBackupEnabledState(autoBackup.autoBackupEnabled());
+    setAutoBackupFrequencyState(autoBackup.autoBackupFrequency());
+    setAutoBackupLastRunState(autoBackup.autoBackupLastRun());
+  }, []);
+
+  const runAutoBackupIfDue = useCallback(
+    async (reason: string) => {
+      await autoBackup.maybeRunAutoBackup(reason);
+      await refreshAutoBackups();
+    },
+    [refreshAutoBackups]
+  );
 
   // Initialise the database once on mount.
   useEffect(() => {
@@ -118,6 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await auth.ensureDefaultPin();
       await repo.applyDueRecurringTransactions();
       refreshAll();
+      await runAutoBackupIfDue("app_open");
       setBiometricAvailable(await auth.isBiometricAvailable());
       if (sessionStorage.getItem(SESSION_KEY) === "true") setIsAuthenticated(true);
       setHideAmounts(localStorage.getItem(HIDE_AMOUNTS_KEY) === "true");
@@ -127,7 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error("Gagal inisialisasi database:", err);
       setIsLoaded(true);
     });
-  }, [refreshAll]);
+  }, [refreshAll, runAutoBackupIfDue]);
 
   // Reflect privacy mode on <body> so the global .hide-amounts CSS rule applies.
   useEffect(() => {
@@ -163,67 +202,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addTransaction = async (t: TransactionInput) => {
     const tx = await repo.addTransaction(t);
     setTransactions((prev) => [tx, ...prev]);
+    await runAutoBackupIfDue("transaction_add");
   };
 
   const updateTransaction = async (id: string, t: TransactionInput) => {
     const tx = await repo.updateTransaction(id, t);
     setTransactions((prev) => prev.map((item) => (item.id === id ? tx : item)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    await runAutoBackupIfDue("transaction_update");
   };
 
   const deleteTransaction = async (id: string) => {
     await repo.deleteTransaction(id);
     setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+    await runAutoBackupIfDue("transaction_delete");
   };
 
   const duplicateTransaction = async (id: string) => {
     const now = new Date();
     const tx = await repo.duplicateTransaction(id, now.toISOString());
     if (tx) setTransactions((prev) => [tx, ...prev]);
+    await runAutoBackupIfDue("transaction_duplicate");
   };
 
   const addTransactionTemplate = async (t: Omit<TransactionTemplate, "id">) => {
     const template = await repo.addTransactionTemplate(t);
     setTemplates((prev) => [template, ...prev]);
+    await runAutoBackupIfDue("template_add");
   };
 
   const deleteTransactionTemplate = async (id: string) => {
     await repo.deleteTransactionTemplate(id);
     setTemplates((prev) => prev.filter((template) => template.id !== id));
+    await runAutoBackupIfDue("template_delete");
   };
 
   const addRecurringTransaction = async (t: Omit<RecurringTransaction, "id" | "active" | "lastRunMonth">) => {
     const recurring = await repo.addRecurringTransaction(t);
     setRecurringTransactions((prev) => [recurring, ...prev]);
+    await runAutoBackupIfDue("recurring_add");
   };
 
   const deleteRecurringTransaction = async (id: string) => {
     await repo.deleteRecurringTransaction(id);
     setRecurringTransactions((prev) => prev.filter((recurring) => recurring.id !== id));
+    await runAutoBackupIfDue("recurring_delete");
   };
 
   const addCategory = async (c: Omit<Category, "id">) => {
     const cat = await repo.addCategory(c);
     setCategories((prev) => [...prev, cat]);
+    await runAutoBackupIfDue("category_add");
   };
 
-  const setSavingsTarget = (target: number) => {
+  const setSavingsTarget = async (target: number) => {
     setSavingsTargetState(target);
-    void repo.setSetting("savings_target", String(target));
+    await repo.setSetting("savings_target", String(target));
+    await runAutoBackupIfDue("setting_savings_target");
   };
 
-  const setSavedAmount = (amount: number) => {
+  const setSavedAmount = async (amount: number) => {
     setSavedAmountState(amount);
-    void repo.setSetting("saved_amount", String(amount));
+    await repo.setSetting("saved_amount", String(amount));
+    await runAutoBackupIfDue("setting_saved_amount");
   };
 
-  const setMonthlyBudget = (amount: number) => {
+  const setMonthlyBudget = async (amount: number) => {
     setMonthlyBudgetState(amount);
-    void repo.setSetting("monthly_budget", String(amount));
+    await repo.setSetting("monthly_budget", String(amount));
+    await runAutoBackupIfDue("setting_monthly_budget");
   };
 
-  const setDailySpendingLimit = (amount: number) => {
+  const setDailySpendingLimit = async (amount: number) => {
     setDailySpendingLimitState(amount);
-    void repo.setSetting("daily_spending_limit", String(amount));
+    await repo.setSetting("daily_spending_limit", String(amount));
+    await runAutoBackupIfDue("setting_daily_limit");
   };
 
   const enableBudgetAlerts = async () => {
@@ -251,11 +303,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importDb = async (file: File) => {
     await importDbFile(file);
     refreshAll();
+    await runAutoBackupIfDue("restore_import");
   };
 
   const resetData = async () => {
     await resetToDefaults();
     refreshAll();
+    await runAutoBackupIfDue("reset_data");
+  };
+
+  const setAutoBackupEnabled = async (enabled: boolean) => {
+    await autoBackup.setAutoBackupEnabled(enabled);
+    await refreshAutoBackups();
+    if (enabled) await runAutoBackupIfDue("auto_backup_enabled");
+  };
+
+  const setAutoBackupFrequency = async (frequency: AutoBackupFrequency) => {
+    await autoBackup.setAutoBackupFrequency(frequency);
+    await refreshAutoBackups();
+    await runAutoBackupIfDue("auto_backup_frequency");
+  };
+
+  const createAutoBackup = async () => {
+    await autoBackup.createAutoBackup("manual");
+    await refreshAutoBackups();
+  };
+
+  const restoreAutoBackup = async (id: string) => {
+    await autoBackup.restoreAutoBackup(id);
+    refreshAll();
+    await refreshAutoBackups();
+  };
+
+  const deleteAutoBackup = async (id: string) => {
+    await autoBackup.deleteAutoBackup(id);
+    await refreshAutoBackups();
   };
 
   const toggleHideAmounts = () => {
@@ -306,6 +388,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportDb: exportDbFile,
         exportCsvData: () => exportCsv(transactions),
         importDb,
+        autoBackups,
+        autoBackupEnabled: autoBackupEnabledState,
+        autoBackupFrequency: autoBackupFrequencyState,
+        autoBackupLastRun: autoBackupLastRunState,
+        setAutoBackupEnabled,
+        setAutoBackupFrequency,
+        createAutoBackup,
+        restoreAutoBackup,
+        deleteAutoBackup,
         resetData,
         hideAmounts,
         toggleHideAmounts,

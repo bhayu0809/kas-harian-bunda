@@ -33,6 +33,15 @@ export interface RecurringTransaction extends TransactionTemplate {
   lastRunMonth?: string;
 }
 
+export type AutoBackupFrequency = "daily" | "weekly" | "monthly";
+
+export interface AutoBackupSnapshot {
+  id: string;
+  createdAt: string;
+  reason: string;
+  size: number;
+}
+
 export type CategoryColor =
   | "secondary"
   | "tertiary"

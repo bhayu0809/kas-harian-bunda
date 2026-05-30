@@ -2,13 +2,27 @@
 
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useApp } from "@/context/AppContext";
+import { AutoBackupFrequency, useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 })
     .format(value)
     .replace("Rp", "Rp ");
+
+const formatDateTime = (value: string | null) =>
+  value
+    ? new Intl.DateTimeFormat("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(value))
+    : "Belum pernah";
+
+const formatBytes = (value: number) => {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB`;
+  return `${Math.round(value / 1024 / 102.4) / 10} MB`;
+};
 
 export default function PengaturanPage() {
   const {
@@ -21,6 +35,15 @@ export default function PengaturanPage() {
     exportDb,
     exportCsvData,
     importDb,
+    autoBackups,
+    autoBackupEnabled,
+    autoBackupFrequency,
+    autoBackupLastRun,
+    setAutoBackupEnabled,
+    setAutoBackupFrequency,
+    createAutoBackup,
+    restoreAutoBackup,
+    deleteAutoBackup,
     resetData,
     templates,
     recurringTransactions,
@@ -59,8 +82,8 @@ export default function PengaturanPage() {
 
   const handleSaveBudget = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMonthlyBudget(budget);
-    setDailySpendingLimit(dailyLimit);
+    await setMonthlyBudget(budget);
+    await setDailySpendingLimit(dailyLimit);
     notify(budget > 0 || dailyLimit > 0 ? "Batas pengeluaran disimpan." : "Pengingat pengeluaran dimatikan.");
   };
 
@@ -90,6 +113,38 @@ export default function PengaturanPage() {
       notify("Gagal memuat file. Pastikan file .db valid.");
     }
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleToggleAutoBackup = async () => {
+    const next = !autoBackupEnabled;
+    await setAutoBackupEnabled(next);
+    notify(next ? "Auto backup lokal diaktifkan." : "Auto backup lokal dimatikan.");
+  };
+
+  const handleAutoBackupFrequency = async (frequency: AutoBackupFrequency) => {
+    await setAutoBackupFrequency(frequency);
+    notify("Frekuensi auto backup disimpan.");
+  };
+
+  const handleCreateAutoBackup = async () => {
+    await createAutoBackup();
+    notify("Backup lokal dibuat.");
+  };
+
+  const handleRestoreAutoBackup = async (id: string) => {
+    if (!confirm("Pulihkan data dari auto backup ini? Data saat ini akan ditimpa.")) return;
+    try {
+      await restoreAutoBackup(id);
+      notify("Data berhasil dipulihkan dari auto backup.");
+    } catch {
+      notify("Auto backup tidak ditemukan atau gagal dipulihkan.");
+    }
+  };
+
+  const handleDeleteAutoBackup = async (id: string) => {
+    if (!confirm("Hapus snapshot auto backup ini?")) return;
+    await deleteAutoBackup(id);
+    notify("Auto backup dihapus.");
   };
 
   const handleReset = async () => {
@@ -324,6 +379,101 @@ export default function PengaturanPage() {
                 )}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Auto Backup */}
+        <section className={cardClass}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+              <span className="material-symbols-outlined">backup</span>
+            </div>
+            <h3 className="font-headline text-lg font-bold text-primary">Auto Backup Lokal</h3>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mb-6">
+            Menyimpan snapshot database lengkap di perangkat ini. Snapshot tidak diunggah dan tidak otomatis menjadi file download.
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 mb-6">
+            <div className="rounded-2xl bg-surface-container-low p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-body text-sm font-semibold text-on-surface">Status Auto Backup</p>
+                <p className="font-body text-xs text-on-surface-variant">
+                  {autoBackupEnabled ? `Aktif, ${autoBackupFrequency === "daily" ? "harian" : autoBackupFrequency === "weekly" ? "mingguan" : "bulanan"}.` : "Tidak aktif."} Backup terakhir: {formatDateTime(autoBackupLastRun)}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleToggleAutoBackup()}
+                className={`w-full sm:w-auto shrink-0 h-11 px-5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer ${
+                  autoBackupEnabled
+                    ? "bg-secondary text-on-secondary hover:opacity-90"
+                    : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
+                }`}
+              >
+                {autoBackupEnabled ? "Aktif" : "Aktifkan"}
+              </button>
+            </div>
+
+            <button type="button" onClick={() => void handleCreateAutoBackup()} className="min-h-12 px-5 bg-secondary text-on-secondary rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center">
+              <span className="material-symbols-outlined text-[20px]">add_task</span>
+              Backup Sekarang
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
+            {(["daily", "weekly", "monthly"] as AutoBackupFrequency[]).map((frequency) => (
+              <button
+                key={frequency}
+                type="button"
+                onClick={() => void handleAutoBackupFrequency(frequency)}
+                className={`min-h-11 rounded-xl border px-4 font-body text-sm font-semibold transition-all cursor-pointer ${
+                  autoBackupFrequency === frequency
+                    ? "border-secondary bg-secondary-container text-on-secondary-container"
+                    : "border-surface-container-highest bg-surface-container-low text-on-surface-variant hover:bg-surface-container"
+                }`}
+              >
+                {frequency === "daily" ? "Harian" : frequency === "weekly" ? "Mingguan" : "Bulanan"}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-body text-xs font-bold text-on-surface-variant uppercase tracking-wider">Snapshot Tersimpan</h4>
+            {autoBackups.length === 0 ? (
+              <p className="rounded-2xl bg-surface-container-low p-4 font-body text-xs text-on-surface-variant">
+                Belum ada auto backup. Aktifkan auto backup atau tekan Backup Sekarang.
+              </p>
+            ) : (
+              autoBackups.map((backup) => (
+                <div key={backup.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl bg-surface-container-low p-4">
+                  <div className="min-w-0">
+                    <p className="font-body text-sm font-semibold text-on-surface">{formatDateTime(backup.createdAt)}</p>
+                    <p className="font-body text-xs text-on-surface-variant">
+                      {formatBytes(backup.size)} • {backup.reason.replaceAll("_", " ")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleRestoreAutoBackup(backup.id)}
+                      className="h-10 flex-1 sm:flex-none sm:w-10 rounded-full bg-secondary-container text-on-secondary-container hover:bg-secondary hover:text-on-secondary transition-colors cursor-pointer flex items-center justify-center"
+                      aria-label="Pulihkan auto backup"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">restore</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteAutoBackup(backup.id)}
+                      className="h-10 flex-1 sm:flex-none sm:w-10 rounded-full bg-error-container/60 text-error hover:bg-error hover:text-on-error transition-colors cursor-pointer flex items-center justify-center"
+                      aria-label="Hapus auto backup"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
