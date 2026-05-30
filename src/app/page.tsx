@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { getDailyAllowanceStatus, getWeeklySpendingStatus } from "@/lib/budget";
+import { getBudgetStatus, getDailyAllowanceStatus, getWeeklySpendingStatus } from "@/lib/budget";
+import { getFinancialAdvice } from "@/lib/advice";
 
 // Format Currency Utility Helper
 const formatRupiah = (value: number) => {
@@ -50,6 +51,9 @@ export default function DashboardPage() {
     dailySpendingLimit,
     weeklySpendingLimit,
     dailyRolloverEnabled,
+    monthlyBudget,
+    savedAmount,
+    savingsTarget,
   } = useApp();
   const router = useRouter();
 
@@ -78,6 +82,35 @@ export default function DashboardPage() {
     totalIncome > 0
       ? Math.min(Math.round((totalExpense / totalIncome) * 100), 100)
       : 0;
+
+  // Biggest expense category this month — drives the "pangkas/awasi" advice.
+  const expenseByCategory = monthTransactions
+    .filter((t) => t.type === "expense")
+    .reduce<Record<string, number>>((acc, t) => {
+      acc[t.category] = (acc[t.category] ?? 0) + t.amount;
+      return acc;
+    }, {});
+  const topCategory = Object.entries(expenseByCategory)
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount)[0] ?? null;
+
+  // Rule-based financial advice (defensif saat minus/ketat, ofensif saat surplus).
+  const advice = getFinancialAdvice({
+    income: totalIncome,
+    expense: totalExpense,
+    topCategory,
+    daily: dailySpendingLimit > 0 ? dailyStatus : null,
+    weekly: weeklySpendingLimit > 0 ? weeklyStatus : null,
+    monthly: monthlyBudget > 0 ? getBudgetStatus(transactions, monthlyBudget, now) : null,
+    savedAmount,
+    savingsTarget,
+  });
+
+  const adviceTone = {
+    defensive: { chip: "bg-error-container text-on-error-container", icon: "bg-error-container text-error" },
+    offensive: { chip: "bg-secondary-container text-on-secondary-container", icon: "bg-secondary-container text-secondary" },
+    neutral: { chip: "bg-surface-container text-on-surface-variant", icon: "bg-surface-container text-on-surface-variant" },
+  } as const;
 
   // Get last 5 transactions
   const recentTransactions = transactions.slice(0, 5);
@@ -388,6 +421,50 @@ export default function DashboardPage() {
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Saran Keuangan (rule-based, sesuai kondisi) */}
+        {advice.length > 0 && (
+          <div className="bg-surface-container-lowest rounded-3xl p-6 md:p-8 shadow-soft border border-surface-container-low">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  tips_and_updates
+                </span>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-headline text-lg md:text-xl font-bold text-primary">Saran Keuangan</h3>
+                <p className="font-body text-xs text-on-surface-variant mt-0.5 font-medium">
+                  Menyesuaikan kondisi kas bulan ini
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {advice.map((item) => {
+                const tone = adviceTone[item.tone];
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-4 p-4 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-colors"
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tone.icon}`}>
+                      <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h4 className="font-headline text-sm font-bold text-on-surface">{item.title}</h4>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full font-body ${tone.chip}`}>
+                          {item.tone === "defensive" ? "Hemat" : item.tone === "offensive" ? "Tambah Income" : "Info"}
+                        </span>
+                      </div>
+                      <p className="font-body text-xs text-on-surface-variant leading-relaxed">{item.message}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
