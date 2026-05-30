@@ -109,7 +109,7 @@ self.addEventListener("periodicsync", (event) => {
       const notified = await cache.match("/__budget_notified");
       const lastMonth = notified ? await notified.text() : "";
       if (status.shouldAlert && lastMonth !== status.monthKey) {
-        await self.registration.showNotification("Anggaran Bulanan", {
+        await self.registration.showNotification("Batas Pengeluaran", {
           body: status.message,
           icon: "/icons/icon-192.png",
           badge: "/icons/icon-192.png",

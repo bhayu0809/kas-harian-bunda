@@ -1,7 +1,7 @@
 import type { Transaction } from "@/lib/db/types";
 
-// Pure budget/pace logic — given the month's spending so far, project whether
-// the monthly budget will be exhausted before the month ends.
+// Pure spending-limit logic — given the month's spending so far, project
+// whether the configured monthly expense limit may be hit before month-end.
 
 export interface BudgetStatus {
   budget: number;
@@ -49,11 +49,11 @@ export function getBudgetStatus(
 
   let message = "";
   if (exceeded) {
-    message = `Anggaran bulanan sudah terlampaui — belanja ${formatRupiah(spent)} dari ${formatRupiah(budget)}.`;
+    message = `Batas pengeluaran bulanan sudah terlampaui — belanja ${formatRupiah(spent)} dari ${formatRupiah(budget)}.`;
   } else if (overPace) {
-    message = `Belanja bulan ini ${formatRupiah(spent)} dari anggaran ${formatRupiah(
+    message = `Belanja bulan ini ${formatRupiah(spent)} dari batas ${formatRupiah(
       budget
-    )}. Dengan laju ini, anggaran diperkirakan habis sebelum akhir bulan.`;
+    )}. Dengan laju ini, batas pengeluaran bisa terlampaui sebelum akhir bulan.`;
   }
 
   return { budget, spent, remaining, daysElapsed, daysInMonth, projectedSpend, shouldAlert, exceeded, monthKey, message };

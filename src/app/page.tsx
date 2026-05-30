@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
@@ -46,14 +46,8 @@ export default function DashboardPage() {
   const { 
     transactions, 
     categories, 
-    monthlyBudget,
-    setMonthlyBudget,
   } = useApp();
   const router = useRouter();
-
-  // Dialog state for editing monthly budget
-  const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [tempBudget, setTempBudget] = useState(monthlyBudget);
 
   const now = new Date();
   const monthTransactions = transactions.filter((t) => {
@@ -72,20 +66,14 @@ export default function DashboardPage() {
 
   const currentSaldo = totalIncome - totalExpense;
 
-  // Monthly budget progress (guard against an unset / zero budget)
-  const budgetPercent =
-    monthlyBudget > 0
-      ? Math.min(Math.round((totalExpense / monthlyBudget) * 100), 100)
+  // Monthly cash usage grows with recorded income.
+  const usagePercent =
+    totalIncome > 0
+      ? Math.min(Math.round((totalExpense / totalIncome) * 100), 100)
       : 0;
 
   // Get last 5 transactions
   const recentTransactions = transactions.slice(0, 5);
-
-  const handleSaveBudget = (e: React.FormEvent) => {
-    e.preventDefault();
-    setMonthlyBudget(tempBudget);
-    setIsEditingBudget(false);
-  };
 
   return (
     <DashboardLayout>
@@ -112,40 +100,30 @@ export default function DashboardPage() {
                     Saldo Hari Ini
                   </h3>
                 </div>
-                <button 
-                  onClick={() => {
-                    setTempBudget(monthlyBudget);
-                    setIsEditingBudget(true);
-                  }}
-                  className="text-xs text-secondary hover:underline flex items-center gap-1 font-body font-medium cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-sm">settings</span>
-                  Atur Anggaran
-                </button>
               </div>
               <h2 className="font-headline text-3xl lg:text-5xl text-on-surface mt-2 font-bold tracking-tight break-words tabular-nums amount">
                 {formatRupiah(currentSaldo)}
               </h2>
               <p className="font-body text-xs text-on-surface-variant mt-2 font-medium">
-                Catatan Kas Aktif
+                Sisa dana bulan ini
               </p>
             </div>
 
-            {/* Monthly Budget Info */}
+            {/* Monthly Cash Info */}
             <div className="mt-8 pt-6 border-t border-surface-variant flex flex-col sm:flex-row gap-4 sm:gap-8 relative z-10">
               <div className="shrink-0">
                 <p className="font-body text-xs text-on-surface-variant mb-1">
-                  Anggaran Bulan Ini
+                  Dana Bulan Ini
                 </p>
                 <p className="font-headline text-xl font-bold text-secondary amount">
-                  {monthlyBudget > 0 ? formatRupiah(monthlyBudget) : "Belum diatur"}
+                  {formatRupiah(totalIncome)}
                 </p>
               </div>
               <div className="flex-1 flex flex-col justify-center">
                 <div className="w-full bg-surface-container rounded-full h-2.5 mb-2 overflow-hidden">
                   <div
                     className="bg-secondary h-full rounded-full transition-all duration-500"
-                    style={{ width: `${budgetPercent}%` }}
+                    style={{ width: `${usagePercent}%` }}
                   />
                 </div>
                 <div className="flex justify-between items-center">
@@ -153,7 +131,7 @@ export default function DashboardPage() {
                     <span className="amount">{formatRupiah(totalExpense)}</span> terpakai
                   </span>
                   <span className="font-body text-xs font-semibold text-secondary">
-                    {budgetPercent}% Digunakan
+                    {usagePercent}% Digunakan
                   </span>
                 </div>
               </div>
@@ -375,46 +353,6 @@ export default function DashboardPage() {
         </div>
 
       </div>
-
-      {/* Monthly Budget Modal Dialog */}
-      {isEditingBudget && (
-        <div className="fixed inset-0 z-50 bg-on-background/25 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
-          <div className="bg-surface-container-lowest rounded-[24px] p-8 w-full max-w-[400px] shadow-lux flex flex-col">
-            <h3 className="font-headline text-lg font-bold text-primary mb-6">
-              Pengaturan Anggaran Bulanan
-            </h3>
-            <form onSubmit={handleSaveBudget} className="space-y-5">
-              <div>
-                <label className="block font-body text-xs font-semibold text-on-surface-variant mb-2">
-                  Anggaran Bulanan (Rupiah)
-                </label>
-                <input
-                  type="number"
-                  value={tempBudget}
-                  onChange={(e) => setTempBudget(Number(e.target.value))}
-                  className="w-full rounded-xl border border-surface-container-highest bg-surface-container-low p-4 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors"
-                  required
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingBudget(false)}
-                  className="flex-1 h-12 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-body text-sm font-semibold transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 h-12 bg-primary text-on-primary hover:opacity-90 rounded-xl font-body text-sm font-semibold transition-opacity cursor-pointer"
-                >
-                  Simpan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 }

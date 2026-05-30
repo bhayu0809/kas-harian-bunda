@@ -53,12 +53,12 @@ export default function PengaturanPage() {
   const handleSaveBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     setMonthlyBudget(budget);
-    notify(budget > 0 ? "Anggaran bulanan disimpan." : "Anggaran bulanan dimatikan.");
+    notify(budget > 0 ? "Batas pengeluaran disimpan." : "Pengingat pengeluaran dimatikan.");
   };
 
   const handleEnableAlerts = async () => {
     const ok = await enableBudgetAlerts();
-    notify(ok ? "Notifikasi anggaran diaktifkan." : "Izin notifikasi ditolak/tidak didukung.");
+    notify(ok ? "Notifikasi batas pengeluaran diaktifkan." : "Izin notifikasi ditolak/tidak didukung.");
   };
 
   const handleBiometricToggle = async () => {
@@ -179,25 +179,25 @@ export default function PengaturanPage() {
           </div>
         </section>
 
-        {/* Anggaran Bulanan + Notifikasi */}
+        {/* Batas Pengeluaran + Notifikasi */}
         <section className={cardClass}>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
               <span className="material-symbols-outlined">notifications_active</span>
             </div>
-            <h3 className="font-headline text-lg font-bold text-primary">Anggaran Bulanan</h3>
+            <h3 className="font-headline text-lg font-bold text-primary">Batas Pengeluaran Bulanan</h3>
           </div>
           <p className="font-body text-xs text-on-surface-variant mb-6">
-            Tetapkan anggaran belanja per bulan. Anda akan diingatkan bila pola belanja diperkirakan menghabiskannya sebelum akhir bulan. Setel 0 untuk mematikan.
+            Tetapkan batas belanja untuk pengingat. Dana bulan ini tetap mengikuti pemasukan yang dicatat, sedangkan batas ini hanya dipakai untuk alarm. Setel 0 untuk mematikan.
           </p>
           <form onSubmit={handleSaveBudget} className="flex flex-col sm:flex-row gap-4 sm:items-end mb-6">
             <div className="flex-1 flex flex-col gap-2">
               <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
-                Anggaran ({formatRupiah(budget)})
+                Batas Pengeluaran ({formatRupiah(budget)})
               </label>
               <input type="number" value={budget} onChange={(e) => setBudget(Number(e.target.value))} className={inputClass} />
             </div>
-            <button type="submit" className={primaryBtn}>Simpan Anggaran</button>
+            <button type="submit" className={primaryBtn}>Simpan Batas</button>
           </form>
 
           <div className="flex items-center justify-between gap-4 pt-6 border-t border-surface-container">

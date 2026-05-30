@@ -8,7 +8,7 @@ import { cacheBudgetStatus, showLocalNotification } from "@/lib/notify";
 
 const NOTIFIED_KEY = "budget_alert_notified";
 
-// Evaluates the monthly budget on data changes: drives the in-app banner and
+// Evaluates the monthly expense limit on data changes: drives the in-app banner and
 // fires a system notification at most once per month (when permitted).
 export function useBudgetAlert() {
   const { isLoaded, transactions, monthlyBudget, notifPermission } = useApp();
@@ -31,7 +31,7 @@ export function useBudgetAlert() {
     if (!status.shouldAlert) return;
 
     if (notifPermission === "granted" && getSetting(NOTIFIED_KEY) !== status.monthKey) {
-      void showLocalNotification("Anggaran Bulanan", status.message);
+      void showLocalNotification("Batas Pengeluaran", status.message);
       void setSetting(NOTIFIED_KEY, status.monthKey);
     }
   }, [isLoaded, status, notifPermission]);
