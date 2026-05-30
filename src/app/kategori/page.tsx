@@ -33,41 +33,70 @@ const COLOR_POOL: { type: Category["colorType"]; label: string; bgClass: string;
 ];
 
 export default function KategoriPage() {
-  const { categories, addCategory } = useApp();
-  
+  const { categories, addCategory, updateCategory } = useApp();
+
   // Dialog state
   const [isOpen, setIsOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedIcon, setSelectedIcon] = useState("shopping_cart");
   const [selectedColorType, setSelectedColorType] = useState<Category["colorType"]>("secondary");
 
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setDescription("");
+    setSelectedIcon("shopping_cart");
+    setSelectedColorType("secondary");
+  };
+
+  const openAdd = () => {
+    resetForm();
+    setIsOpen(true);
+  };
+
+  const openEdit = (cat: Category) => {
+    setEditingId(cat.id);
+    setName(cat.name);
+    setDescription(cat.description);
+    setSelectedIcon(cat.icon);
+    setSelectedColorType(cat.colorType);
+    setIsOpen(true);
+  };
+
+  const closeDialog = () => {
+    setIsOpen(false);
+    resetForm();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    // Check duplicate name
+    // Check duplicate name (ignoring the category currently being edited)
     const exists = categories.some(
-      (c) => c.name.toLowerCase() === name.trim().toLowerCase()
+      (c) => c.id !== editingId && c.name.toLowerCase() === name.trim().toLowerCase()
     );
     if (exists) {
       alert("Nama kategori ini sudah terdaftar.");
       return;
     }
 
-    addCategory({
+    const payload = {
       name: name.trim(),
       description: description.trim() || "Kategori kustom",
       icon: selectedIcon,
       colorType: selectedColorType,
-    });
+    };
 
-    // Reset Form
-    setName("");
-    setDescription("");
-    setSelectedIcon("shopping_cart");
-    setSelectedColorType("secondary");
-    setIsOpen(false);
+    if (editingId) {
+      updateCategory(editingId, payload);
+    } else {
+      addCategory(payload);
+    }
+
+    closeDialog();
   };
 
   return (
@@ -85,7 +114,7 @@ export default function KategoriPage() {
             </p>
           </div>
           <button
-            onClick={() => setIsOpen(true)}
+            onClick={openAdd}
             className="flex items-center gap-2 bg-primary text-on-primary rounded-full px-8 py-4 hover:bg-primary-container transition-colors shadow-soft whitespace-nowrap min-h-[56px] font-body text-sm font-bold cursor-pointer"
           >
             <span className="material-symbols-outlined">add</span>
@@ -101,9 +130,12 @@ export default function KategoriPage() {
             const cardBgClass = poolColor ? poolColor.bgClass : "bg-surface-container text-on-surface-variant";
 
             return (
-              <div
+              <button
                 key={cat.id}
-                className="group relative bg-surface-container-lowest rounded-[24px] p-6 shadow-soft border border-transparent hover:border-outline-variant transition-all duration-300 flex flex-col justify-between min-h-[160px] cursor-pointer"
+                type="button"
+                onClick={() => openEdit(cat)}
+                aria-label={`Edit kategori ${cat.name}`}
+                className="group relative text-left bg-surface-container-lowest rounded-[24px] p-6 shadow-soft border border-transparent hover:border-outline-variant transition-all duration-300 flex flex-col justify-between min-h-[160px] cursor-pointer"
               >
                 <div className="flex justify-between items-start mb-6">
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${cardBgClass}`}>
@@ -114,10 +146,15 @@ export default function KategoriPage() {
                       {cat.icon}
                     </span>
                   </div>
-                  {/* Subtle info label / tag */}
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-body">
-                    {cat.name === "Pendapatan" ? "Pemasukan" : "Pengeluaran"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {/* Subtle info label / tag */}
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-body">
+                      {cat.name === "Pendapatan" ? "Pemasukan" : "Pengeluaran"}
+                    </span>
+                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">
+                      edit
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <h4 className="font-headline text-lg font-bold text-on-surface mb-1 truncate">
@@ -127,7 +164,7 @@ export default function KategoriPage() {
                     {cat.description}
                   </p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -139,14 +176,14 @@ export default function KategoriPage() {
         <div className="fixed inset-0 z-50 bg-on-background/25 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-surface-container-lowest rounded-[32px] p-8 w-full max-w-[500px] shadow-[0_40px_80px_-20px_rgba(93,92,86,0.15)] flex flex-col relative max-h-[90vh] overflow-y-auto scrollbar-hide">
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={closeDialog}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container text-on-surface-variant cursor-pointer"
             >
               <span className="material-symbols-outlined">close</span>
             </button>
 
             <h3 className="font-headline text-xl font-bold text-primary mb-6">
-              Tambah Kategori Baru
+              {editingId ? "Edit Kategori" : "Tambah Kategori Baru"}
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -240,7 +277,7 @@ export default function KategoriPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={closeDialog}
                   className="flex-1 h-14 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-body text-sm font-semibold transition-colors cursor-pointer"
                 >
                   Batal
@@ -249,7 +286,7 @@ export default function KategoriPage() {
                   type="submit"
                   className="flex-1 h-14 bg-primary text-on-primary hover:opacity-90 rounded-xl font-body text-sm font-semibold transition-opacity cursor-pointer"
                 >
-                  Simpan Kategori
+                  {editingId ? "Simpan Perubahan" : "Simpan Kategori"}
                 </button>
               </div>
             </form>

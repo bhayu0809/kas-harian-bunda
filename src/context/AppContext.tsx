@@ -67,6 +67,7 @@ interface AppContextType {
   addRecurringTransaction: (t: Omit<RecurringTransaction, "id" | "active" | "lastRunMonth">) => Promise<void>;
   deleteRecurringTransaction: (id: string) => Promise<void>;
   addCategory: (c: Omit<Category, "id">) => Promise<void>;
+  updateCategory: (id: string, c: Omit<Category, "id">) => Promise<void>;
   profileName: string;
   profilePhoto: string;
   setProfile: (name: string, photo: string) => Promise<void>;
@@ -368,6 +369,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await runAutoBackupIfDue("category_add");
   };
 
+  const updateCategory = async (id: string, c: Omit<Category, "id">) => {
+    await repo.updateCategory(id, c);
+    // Renaming cascades to transactions/templates/recurring, so refresh all.
+    refreshAll();
+    await runAutoBackupIfDue("category_edit");
+  };
+
   const setProfile = async (name: string, photo: string) => {
     const nextName = name.trim() || DEFAULT_PROFILE_NAME;
     const nextPhoto = photo || DEFAULT_PROFILE_PHOTO;
@@ -505,6 +513,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addRecurringTransaction,
         deleteRecurringTransaction,
         addCategory,
+        updateCategory,
         profileName,
         profilePhoto,
         setProfile,

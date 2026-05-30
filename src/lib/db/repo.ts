@@ -161,6 +161,24 @@ export async function addCategory(input: Omit<Category, "id">): Promise<Category
   return cat;
 }
 
+export async function updateCategory(id: string, input: Omit<Category, "id">): Promise<Category> {
+  const database = getDb();
+  const prev = listCategories().find((c) => c.id === id);
+  database.run(
+    "UPDATE categories SET name = ?, description = ?, icon = ?, colorType = ? WHERE id = ?",
+    [input.name, input.description, input.icon, input.colorType, id]
+  );
+  // Transactions reference categories by name, so cascade a rename to keep
+  // existing records linked to the renamed category.
+  if (prev && prev.name !== input.name) {
+    database.run("UPDATE transactions SET category = ? WHERE category = ?", [input.name, prev.name]);
+    database.run("UPDATE transaction_templates SET category = ? WHERE category = ?", [input.name, prev.name]);
+    database.run("UPDATE recurring_transactions SET category = ? WHERE category = ?", [input.name, prev.name]);
+  }
+  await persist();
+  return { ...input, id };
+}
+
 // --- Settings (key/value) --------------------------------------------------
 
 export function getSetting(key: string): string | null {
