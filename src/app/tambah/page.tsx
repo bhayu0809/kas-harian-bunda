@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useApp, TransactionType, TransactionSource } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import SuccessModal from "@/components/SuccessModal";
+import { formatNumberInput, parseNumberInput } from "@/lib/numberInput";
 
 function TambahForm() {
   const {
@@ -32,7 +33,7 @@ function TambahForm() {
   // Form states
   const [type, setType] = useState<TransactionType>(initialType);
   const [amount, setAmount] = useState<number>(0);
-  const [amountInput, setAmountInput] = useState<string>("0");
+  const [amountInput, setAmountInput] = useState<string>("");
   const [label, setLabel] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [date, setDate] = useState<string>(
@@ -66,7 +67,7 @@ function TambahForm() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setType(sourceTx.type);
       setAmount(sourceTx.amount);
-      setAmountInput(String(sourceTx.amount));
+      setAmountInput(formatNumberInput(sourceTx.amount));
       setLabel(sourceTx.label);
       setCategory(sourceTx.category);
       setDate((isEditing ? sourceTx.date : new Date().toISOString()).substring(0, 10));
@@ -80,7 +81,7 @@ function TambahForm() {
     if (selectedTemplate) {
       setType(selectedTemplate.type);
       setAmount(selectedTemplate.amount);
-      setAmountInput(String(selectedTemplate.amount));
+      setAmountInput(formatNumberInput(selectedTemplate.amount));
       setLabel(selectedTemplate.label);
       setCategory(selectedTemplate.category);
       setNotes(selectedTemplate.notes ?? "");
@@ -104,15 +105,13 @@ function TambahForm() {
   const handleShorthandAmount = (value: number) => {
     const nextAmount = amount + value;
     setAmount(nextAmount);
-    setAmountInput(String(nextAmount));
+    setAmountInput(formatNumberInput(nextAmount));
   };
 
   const handleAmountInputChange = (val: string) => {
-    // Strip non-digits
-    const cleanVal = val.replace(/\D/g, "");
-    const parsed = Number(cleanVal) || 0;
+    const parsed = parseNumberInput(val);
     setAmount(parsed);
-    setAmountInput(cleanVal === "" ? "" : String(parsed));
+    setAmountInput(formatNumberInput(parsed));
   };
 
   const switchType = (nextType: TransactionType) => {
@@ -177,7 +176,7 @@ function TambahForm() {
 
   const handleResetForm = () => {
     setAmount(0);
-    setAmountInput("0");
+    setAmountInput("");
     setLabel("");
     setNotes("");
     setDate(new Date().toISOString().substring(0, 10));
@@ -273,6 +272,7 @@ function TambahForm() {
               <span className="font-headline text-2xl font-bold text-on-surface-variant">Rp</span>
               <input
                 type="text"
+                inputMode="numeric"
                 value={amountInput}
                 onChange={(e) => handleAmountInputChange(e.target.value)}
                 className="bg-transparent border-none p-0 text-center font-headline text-3xl md:text-4xl font-bold text-on-surface w-full max-w-[220px] focus:ring-0 focus:outline-none placeholder-outline-variant"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AutoBackupFrequency, DEFAULT_PROFILE_PHOTO, useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PIN_LENGTH } from "@/lib/auth/credentials";
+import { formatNumberInput, parseNumberInput } from "@/lib/numberInput";
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 })
@@ -66,6 +67,8 @@ export default function PengaturanPage() {
   const [confirmPin, setConfirmPin] = useState("");
   const [budget, setBudget] = useState(monthlyBudget);
   const [dailyLimit, setDailyLimit] = useState(dailySpendingLimit);
+  const [budgetInput, setBudgetInput] = useState(formatNumberInput(monthlyBudget));
+  const [dailyLimitInput, setDailyLimitInput] = useState(formatNumberInput(dailySpendingLimit));
   const [profileNameInput, setProfileNameInput] = useState(profileName);
   const [profilePhotoInput, setProfilePhotoInput] = useState(profilePhoto);
   const [toast, setToast] = useState("");
@@ -77,6 +80,14 @@ export default function PengaturanPage() {
     setProfileNameInput(profileName);
     setProfilePhotoInput(profilePhoto);
   }, [profileName, profilePhoto]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBudget(monthlyBudget);
+    setBudgetInput(formatNumberInput(monthlyBudget));
+    setDailyLimit(dailySpendingLimit);
+    setDailyLimitInput(formatNumberInput(dailySpendingLimit));
+  }, [monthlyBudget, dailySpendingLimit]);
 
   const notify = (msg: string) => {
     setToast(msg);
@@ -129,6 +140,18 @@ export default function PengaturanPage() {
     await setMonthlyBudget(budget);
     await setDailySpendingLimit(dailyLimit);
     notify(budget > 0 || dailyLimit > 0 ? "Batas pengeluaran disimpan." : "Pengingat pengeluaran dimatikan.");
+  };
+
+  const handleDailyLimitInput = (value: string) => {
+    const parsed = parseNumberInput(value);
+    setDailyLimit(parsed);
+    setDailyLimitInput(formatNumberInput(parsed));
+  };
+
+  const handleBudgetInput = (value: string) => {
+    const parsed = parseNumberInput(value);
+    setBudget(parsed);
+    setBudgetInput(formatNumberInput(parsed));
   };
 
   const handleEnableAlerts = async () => {
@@ -374,13 +397,27 @@ export default function PengaturanPage() {
               <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
                 Batas Harian ({formatRupiah(dailyLimit)})
               </label>
-              <input type="number" value={dailyLimit} onChange={(e) => setDailyLimit(Number(e.target.value))} className={inputClass} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={dailyLimitInput}
+                onChange={(e) => handleDailyLimitInput(e.target.value)}
+                placeholder="0"
+                className={inputClass}
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
                 Batas Bulanan ({formatRupiah(budget)})
               </label>
-              <input type="number" value={budget} onChange={(e) => setBudget(Number(e.target.value))} className={inputClass} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={budgetInput}
+                onChange={(e) => handleBudgetInput(e.target.value)}
+                placeholder="0"
+                className={inputClass}
+              />
             </div>
             <div className="sm:col-span-2">
               <button type="submit" className={primaryBtn}>Simpan Batas</button>
