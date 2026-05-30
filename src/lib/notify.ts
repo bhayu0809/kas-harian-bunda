@@ -12,9 +12,12 @@ export function notificationPermission(): NotificationPermission | "unsupported"
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!notificationsSupported()) return false;
-  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "granted") {
+    await registerPeriodicBudgetSync();
+    return true;
+  }
   const result = await Notification.requestPermission();
-  await registerPeriodicBudgetSync();
+  if (result === "granted") await registerPeriodicBudgetSync();
   return result === "granted";
 }
 

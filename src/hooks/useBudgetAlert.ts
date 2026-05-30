@@ -20,9 +20,15 @@ export function useBudgetAlert() {
   );
 
   useEffect(() => {
-    if (!isLoaded || !status.shouldAlert) return;
+    if (!isLoaded) return;
 
-    void cacheBudgetStatus({ shouldAlert: true, message: status.message, monthKey: status.monthKey });
+    void cacheBudgetStatus({
+      shouldAlert: status.shouldAlert,
+      message: status.message,
+      monthKey: status.monthKey,
+    });
+
+    if (!status.shouldAlert) return;
 
     if (notifPermission === "granted" && getSetting(NOTIFIED_KEY) !== status.monthKey) {
       void showLocalNotification("Anggaran Bulanan", status.message);
