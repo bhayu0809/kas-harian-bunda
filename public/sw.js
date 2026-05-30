@@ -3,7 +3,7 @@
 // when offline); cache-first for same-origin static assets + the SQLite wasm;
 // cache-then-network for cross-origin fonts.
 
-const CACHE = "kas-harian-v1";
+const CACHE = "kas-harian-v2";
 const PRECACHE = [
   "/",
   "/login",
@@ -81,5 +81,42 @@ self.addEventListener("fetch", (event) => {
           })
           .catch(() => cached)
     )
+  );
+});
+
+// Focus the app (or open it) when a notification is clicked.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((c) => "focus" in c);
+      if (existing) return existing.focus();
+      return self.clients.openWindow("/");
+    })
+  );
+});
+
+// Best-effort background check (Chrome/Android, installed PWA). Reads the budget
+// status the app cached on its last run — avoids running sql.js inside the SW.
+self.addEventListener("periodicsync", (event) => {
+  if (event.tag !== "budget-check") return;
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open("kas-harian-meta");
+      const res = await cache.match("/__budget_status");
+      if (!res) return;
+      const status = await res.json();
+      const notified = await cache.match("/__budget_notified");
+      const lastMonth = notified ? await notified.text() : "";
+      if (status.shouldAlert && lastMonth !== status.monthKey) {
+        await self.registration.showNotification("Anggaran Bulanan", {
+          body: status.message,
+          icon: "/icons/icon-192.png",
+          badge: "/icons/icon-192.png",
+          tag: "budget-alert",
+        });
+        await cache.put("/__budget_notified", new Response(status.monthKey));
+      }
+    })()
   );
 });

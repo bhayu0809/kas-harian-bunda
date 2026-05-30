@@ -1,6 +1,7 @@
 import type { Database, SqlJsStatic } from "sql.js";
 import {
   DEFAULT_CATEGORIES,
+  DEFAULT_MONTHLY_BUDGET,
   DEFAULT_SAVED_AMOUNT,
   DEFAULT_SAVINGS_TARGET,
   DEFAULT_TRANSACTIONS,
@@ -90,11 +91,13 @@ function seedDefaults(database: Database) {
   tx.free();
 
   // INSERT OR REPLACE so this is safe to call again during a reset.
-  database.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?,?), (?,?)", [
+  database.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?,?), (?,?), (?,?)", [
     "savings_target",
     String(DEFAULT_SAVINGS_TARGET),
     "saved_amount",
     String(DEFAULT_SAVED_AMOUNT),
+    "monthly_budget",
+    String(DEFAULT_MONTHLY_BUDGET),
   ]);
 }
 

@@ -26,6 +26,10 @@ export default function PengaturanPage() {
     exportCsvData,
     importDb,
     resetData,
+    monthlyBudget,
+    setMonthlyBudget,
+    notifPermission,
+    enableBudgetAlerts,
   } = useApp();
   const router = useRouter();
 
@@ -33,6 +37,7 @@ export default function PengaturanPage() {
   const [confirmPin, setConfirmPin] = useState("");
   const [target, setTarget] = useState(savingsTarget);
   const [saved, setSaved] = useState(savedAmount);
+  const [budget, setBudget] = useState(monthlyBudget);
   const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +61,17 @@ export default function PengaturanPage() {
     setSavingsTarget(target);
     setSavedAmount(saved);
     notify("Target tabungan disimpan.");
+  };
+
+  const handleSaveBudget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMonthlyBudget(budget);
+    notify(budget > 0 ? "Anggaran bulanan disimpan." : "Anggaran bulanan dimatikan.");
+  };
+
+  const handleEnableAlerts = async () => {
+    const ok = await enableBudgetAlerts();
+    notify(ok ? "Notifikasi anggaran diaktifkan." : "Izin notifikasi ditolak/tidak didukung.");
   };
 
   const handleBiometricToggle = async () => {
@@ -199,6 +215,53 @@ export default function PengaturanPage() {
               </button>
             </div>
           </form>
+        </section>
+
+        {/* Anggaran Bulanan + Notifikasi */}
+        <section className={cardClass}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+              <span className="material-symbols-outlined">notifications_active</span>
+            </div>
+            <h3 className="font-headline text-lg font-bold text-primary">Anggaran Bulanan</h3>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mb-6">
+            Tetapkan anggaran belanja per bulan. Anda akan diingatkan bila pola belanja diperkirakan menghabiskannya sebelum akhir bulan. Setel 0 untuk mematikan.
+          </p>
+          <form onSubmit={handleSaveBudget} className="flex flex-col sm:flex-row gap-4 sm:items-end mb-6">
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
+                Anggaran ({formatRupiah(budget)})
+              </label>
+              <input type="number" value={budget} onChange={(e) => setBudget(Number(e.target.value))} className={inputClass} />
+            </div>
+            <button type="submit" className={primaryBtn}>Simpan Anggaran</button>
+          </form>
+
+          <div className="flex items-center justify-between gap-4 pt-6 border-t border-surface-container">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="material-symbols-outlined text-secondary text-[28px]">notifications</span>
+              <div className="min-w-0">
+                <p className="font-body text-sm font-semibold text-on-surface">Notifikasi Pengingat</p>
+                <p className="font-body text-xs text-on-surface-variant">
+                  {notifPermission === "granted"
+                    ? "Aktif. Paling andal saat aplikasi dibuka."
+                    : notifPermission === "unsupported"
+                    ? "Perangkat/browser ini tidak mendukung notifikasi."
+                    : notifPermission === "denied"
+                    ? "Diblokir — aktifkan lewat pengaturan browser."
+                    : "Izinkan agar pengingat muncul sebagai notifikasi."}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleEnableAlerts}
+              disabled={notifPermission === "granted" || notifPermission === "unsupported" || notifPermission === "denied"}
+              className="shrink-0 h-11 px-5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-secondary-container text-on-secondary-container hover:opacity-90"
+            >
+              {notifPermission === "granted" ? "Aktif" : "Aktifkan"}
+            </button>
+          </div>
         </section>
 
         {/* Cadangan & Data */}

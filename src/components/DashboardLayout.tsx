@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import SideNavBar from "./SideNavBar";
 import TopAppBar from "./TopAppBar";
+import BudgetBanner from "./BudgetBanner";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoaded } = useApp();
@@ -67,6 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         <TopAppBar onMenuClick={() => setMobileOpen(true)} />
         <main className="flex-1 overflow-y-auto min-h-0">
+          <BudgetBanner />
           {children}
         </main>
       </div>

@@ -6,6 +6,7 @@ import * as auth from "@/lib/auth/credentials";
 import { initDb, resetToDefaults } from "@/lib/db/sqlite";
 import { exportCsv, exportDbFile, importDbFile } from "@/lib/export/exporters";
 import { DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
+import { notificationPermission, requestNotificationPermission } from "@/lib/notify";
 import type { Category, Transaction } from "@/lib/db/types";
 
 // Re-export domain types so existing pages keep importing them from here.
@@ -27,6 +28,11 @@ interface AppContextType {
   savedAmount: number;
   setSavingsTarget: (target: number) => void;
   setSavedAmount: (amount: number) => void;
+  // monthly budget alerts
+  monthlyBudget: number;
+  setMonthlyBudget: (amount: number) => void;
+  notifPermission: NotificationPermission | "unsupported";
+  enableBudgetAlerts: () => Promise<boolean>;
   // security
   pinIsDefault: boolean;
   changePin: (pin: string) => Promise<void>;
@@ -60,6 +66,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);
   const [hideAmounts, setHideAmounts] = useState(false);
+  const [monthlyBudget, setMonthlyBudgetState] = useState(0);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
 
   // Pull the current database state into React state.
   const refreshAll = useCallback(() => {
@@ -67,6 +75,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCategories(repo.listCategories());
     setSavingsTargetState(Number(repo.getSetting("savings_target") ?? DEFAULT_SAVINGS_TARGET));
     setSavedAmountState(Number(repo.getSetting("saved_amount") ?? DEFAULT_SAVED_AMOUNT));
+    setMonthlyBudgetState(Number(repo.getSetting("monthly_budget") ?? 0));
     setPinIsDefault(auth.isPinDefault());
     setBiometricEnrolled(auth.isBiometricEnrolled());
   }, []);
@@ -80,6 +89,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setBiometricAvailable(await auth.isBiometricAvailable());
       if (sessionStorage.getItem(SESSION_KEY) === "true") setIsAuthenticated(true);
       setHideAmounts(localStorage.getItem(HIDE_AMOUNTS_KEY) === "true");
+      setNotifPermission(notificationPermission());
       setIsLoaded(true);
     })().catch((err) => {
       console.error("Gagal inisialisasi database:", err);
@@ -138,6 +148,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void repo.setSetting("saved_amount", String(amount));
   };
 
+  const setMonthlyBudget = (amount: number) => {
+    setMonthlyBudgetState(amount);
+    void repo.setSetting("monthly_budget", String(amount));
+  };
+
+  const enableBudgetAlerts = async () => {
+    const granted = await requestNotificationPermission();
+    setNotifPermission(notificationPermission());
+    return granted;
+  };
+
   const changePin = async (pin: string) => {
     await auth.setPin(pin, false);
     setPinIsDefault(false);
@@ -188,6 +209,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         savedAmount,
         setSavingsTarget,
         setSavedAmount,
+        monthlyBudget,
+        setMonthlyBudget,
+        notifPermission,
+        enableBudgetAlerts,
         pinIsDefault,
         changePin,
         biometricAvailable,
