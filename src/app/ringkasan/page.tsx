@@ -36,6 +36,7 @@ const getColorHex = (colorType: string) => {
 
 export default function RingkasanPage() {
   const { transactions, categories } = useApp();
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
 
   // Selected month state — defaults to the current month so seeded data is visible
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -51,20 +52,33 @@ export default function RingkasanPage() {
     setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
   };
 
-  const handleMonthPicker = (value: string) => {
-    const [year, month] = value.split("-").map(Number);
-    if (!year || !month) return;
-    setSelectedDate(new Date(year, month - 1, 1));
-  };
-
   const monthNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
   ];
 
+  const shortMonthNames = [
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
+  ];
+
   const currentMonthName = monthNames[selectedDate.getMonth()];
   const currentYear = selectedDate.getFullYear();
-  const selectedMonthValue = `${currentYear}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}`;
+
+  const handleSelectMonth = (monthIndex: number) => {
+    setSelectedDate(new Date(currentYear, monthIndex, 1));
+    setMonthPickerOpen(false);
+  };
+
+  const handleChangeYear = (direction: -1 | 1) => {
+    setSelectedDate(new Date(currentYear + direction, selectedDate.getMonth(), 1));
+  };
+
+  const handleCurrentMonth = () => {
+    const now = new Date();
+    setSelectedDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    setMonthPickerOpen(false);
+  };
 
   // Filter transactions by selected month/year
   const monthlyTransactions = transactions.filter((tx) => {
@@ -153,33 +167,107 @@ export default function RingkasanPage() {
         
         {/* Month Selector & Insight */}
         <div className="flex flex-col gap-6 lg:flex-row lg:justify-between lg:items-end">
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-xl w-full sm:w-fit border border-surface-container-high shadow-xs">
-            <button
-              onClick={handlePrevMonth}
-              className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer shrink-0"
-            >
-              <span className="material-symbols-outlined">chevron_left</span>
-            </button>
-            <span className="flex-1 sm:flex-none text-center font-headline text-base md:text-xl font-bold text-primary px-2 sm:px-4 truncate">
-              {currentMonthName} {currentYear}
-            </span>
-            <button
-              onClick={handleNextMonth}
-              className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer shrink-0"
-            >
-              <span className="material-symbols-outlined">chevron_right</span>
-            </button>
-          </div>
-            <label className="relative block w-full sm:w-44">
-              <span className="sr-only">Pilih bulan</span>
-              <input
-                type="month"
-                value={selectedMonthValue}
-                onChange={(e) => handleMonthPicker(e.target.value)}
-                className="w-full h-full min-h-12 rounded-xl border border-surface-container-high bg-surface-container-low px-4 font-body text-sm font-bold text-primary shadow-xs focus:outline-none focus:border-secondary"
-              />
-            </label>
+          <div className="relative w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-xl w-full sm:w-fit border border-surface-container-high shadow-xs">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  aria-label="Bulan sebelumnya"
+                  className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer shrink-0"
+                >
+                  <span className="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMonthPickerOpen((open) => !open)}
+                  className="flex-1 sm:flex-none min-h-10 text-center font-headline text-base md:text-xl font-bold text-primary px-2 sm:px-4 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer truncate"
+                >
+                  {currentMonthName} {currentYear}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  aria-label="Bulan berikutnya"
+                  className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer shrink-0"
+                >
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMonthPickerOpen((open) => !open)}
+                className="min-h-12 w-full sm:w-auto px-5 rounded-xl bg-secondary text-on-secondary font-body text-sm font-semibold flex items-center justify-center gap-2 shadow-xs hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">calendar_month</span>
+                Pilih Bulan
+              </button>
+            </div>
+
+            {monthPickerOpen && (
+              <div className="absolute left-0 top-full mt-3 z-30 w-full sm:w-[420px] bg-surface-container-lowest rounded-3xl p-4 shadow-lux border border-surface-container-high animate-fade-in">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => handleChangeYear(-1)}
+                    aria-label="Tahun sebelumnya"
+                    className="h-11 w-11 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer flex items-center justify-center"
+                  >
+                    <span className="material-symbols-outlined">chevron_left</span>
+                  </button>
+                  <div className="text-center">
+                    <p className="font-body text-xs font-semibold text-on-surface-variant">Pilih tahun</p>
+                    <p className="font-headline text-2xl font-bold text-primary">{currentYear}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleChangeYear(1)}
+                    aria-label="Tahun berikutnya"
+                    className="h-11 w-11 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer flex items-center justify-center"
+                  >
+                    <span className="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {monthNames.map((name, index) => {
+                    const selected = selectedDate.getMonth() === index;
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => handleSelectMonth(index)}
+                        className={`min-h-14 rounded-2xl px-2 font-body text-sm font-bold transition-all cursor-pointer ${
+                          selected
+                            ? "bg-secondary text-on-secondary shadow-sm"
+                            : "bg-surface-container-low text-on-surface hover:bg-surface-container-high"
+                        }`}
+                      >
+                        <span className="hidden sm:inline">{name}</span>
+                        <span className="sm:hidden">{shortMonthNames[index]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={handleCurrentMonth}
+                    className="min-h-11 flex-1 rounded-xl bg-secondary-container text-on-secondary-container font-body text-sm font-bold hover:opacity-90 cursor-pointer"
+                  >
+                    Bulan Ini
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMonthPickerOpen(false)}
+                    className="min-h-11 flex-1 rounded-xl bg-surface-container-high text-on-surface font-body text-sm font-bold hover:bg-surface-container-highest cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {largestExpenseCategory ? (
