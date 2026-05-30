@@ -109,11 +109,11 @@ export default function LoginPage() {
   if (!isLoaded || !onboardingChecked) return null;
 
   return (
-    <main className="flex-grow flex flex-col items-center justify-center p-6 md:p-12 min-h-screen bg-background">
+    <main className="flex-grow flex flex-col items-center justify-center p-4 md:p-12 h-[100dvh] overflow-hidden bg-background">
       <div className="w-full max-w-[400px] flex flex-col items-center">
         {/* Header */}
-        <div className="flex flex-col items-center mb-12 text-center space-y-6 w-full">
-          <div className="w-24 h-24 md:w-32 md:h-32 bg-surface-container-high rounded-3xl flex items-center justify-center shadow-soft mb-2 transition-transform duration-300 hover:scale-105">
+        <div className="flex flex-col items-center mb-6 md:mb-10 text-center space-y-3 md:space-y-5 w-full">
+          <div className="w-20 h-20 md:w-28 md:h-28 bg-surface-container-high rounded-3xl flex items-center justify-center shadow-soft transition-transform duration-300 hover:scale-105">
             <span
               className="material-symbols-outlined text-[48px] text-secondary"
               style={{ fontVariationSettings: "'FILL' 1" }}
@@ -131,7 +131,7 @@ export default function LoginPage() {
 
         {/* Storage eviction warning */}
         {storageEvicted && (
-          <div className="w-full mb-8 flex items-start gap-3 rounded-2xl bg-tertiary-container text-on-tertiary-container px-4 py-3 animate-fade-in">
+          <div className="w-full mb-4 flex items-start gap-3 rounded-2xl bg-tertiary-container text-on-tertiary-container px-4 py-3 animate-fade-in">
             <span className="material-symbols-outlined text-[20px] shrink-0">warning</span>
             <p className="font-body text-xs font-medium text-left">
               Data lokal tidak ditemukan — kemungkinan dibersihkan oleh browser. Setelah masuk, pulihkan dari backup lewat menu Pengaturan.
@@ -140,7 +140,7 @@ export default function LoginPage() {
         )}
 
         {/* PIN Indicator Dots */}
-        <div className={`flex justify-center gap-6 mb-12 h-4 ${shake ? "animate-shake" : ""}`}>
+        <div className={`flex justify-center gap-6 mb-6 md:mb-10 h-4 ${shake ? "animate-shake" : ""}`}>
           {Array.from({ length: PIN_LENGTH }).map((_, index) => {
             const hasValue = pin.length > index;
             return (
@@ -159,20 +159,20 @@ export default function LoginPage() {
         </div>
 
         {/* Error info */}
-        <div className="h-6 mb-4 text-center">
+        <div className="h-6 mb-2 text-center">
           {error && (
             <p className="font-body text-xs text-error font-medium animate-fade-in">{error}</p>
           )}
         </div>
 
         {/* Keypad */}
-        <div className="grid grid-cols-3 gap-x-6 gap-y-2 mb-8 w-full px-4">
+        <div className="grid grid-cols-3 gap-x-6 gap-y-1 md:gap-y-2 mb-4 md:mb-6 w-full px-4">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
             <button
               key={num}
               onClick={() => handleKeyPress(num)}
               type="button"
-              className="h-20 rounded-full flex items-center justify-center bg-transparent hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
+              className="h-14 md:h-20 rounded-full flex items-center justify-center bg-transparent hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
             >
               <span className="font-headline text-3xl text-on-surface font-medium">{num}</span>
             </button>
@@ -184,18 +184,18 @@ export default function LoginPage() {
               onClick={handleBiometric}
               aria-label="Buka dengan biometrik"
               type="button"
-              className="h-20 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
+              className="h-14 md:h-20 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[32px]">fingerprint</span>
             </button>
           ) : (
-            <div className="h-20" />
+            <div className="h-14 md:h-20" />
           )}
 
           <button
             onClick={() => handleKeyPress("0")}
             type="button"
-            className="h-20 rounded-full flex items-center justify-center bg-transparent hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
+            className="h-14 md:h-20 rounded-full flex items-center justify-center bg-transparent hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
           >
             <span className="font-headline text-3xl text-on-surface font-medium">0</span>
           </button>
@@ -204,7 +204,7 @@ export default function LoginPage() {
             onClick={handleBackspace}
             aria-label="Hapus"
             type="button"
-            className="h-20 rounded-full flex items-center justify-center bg-transparent text-on-surface hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
+            className="h-14 md:h-20 rounded-full flex items-center justify-center bg-transparent text-on-surface hover:bg-surface-container-high active:scale-95 transition-all duration-150 cursor-pointer"
           >
             <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 0" }}>
               backspace
@@ -213,12 +213,12 @@ export default function LoginPage() {
         </div>
 
         {/* Actions */}
-        <div className="w-full flex flex-col items-center space-y-4">
+        <div className="w-full flex flex-col items-center space-y-2 md:space-y-3">
           {showBiometric && (
             <button
               onClick={handleBiometric}
               type="button"
-              className="w-full max-w-xs h-16 bg-secondary-container text-on-secondary-container font-body text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full max-w-xs h-12 md:h-16 bg-secondary-container text-on-secondary-container font-body text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined">fingerprint</span>
               {biometricEnrolled ? "Buka dengan Sidik Jari / Face ID" : "Biometrik Belum Aktif"}
@@ -228,13 +228,13 @@ export default function LoginPage() {
             onClick={() => submitPin(pin)}
             disabled={pin.length < PIN_LENGTH}
             type="button"
-            className="w-full max-w-xs h-16 bg-primary text-on-primary font-body text-sm font-semibold rounded-xl flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full max-w-xs h-12 md:h-16 bg-primary text-on-primary font-body text-sm font-semibold rounded-xl flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             Masuk
           </button>
           <button
             onClick={() => setShowForgotPin(true)}
-            className="font-body text-xs text-secondary hover:text-on-secondary-container transition-colors py-2 px-4 rounded-lg hover:bg-surface-container-low cursor-pointer"
+            className="font-body text-xs text-secondary hover:text-on-secondary-container transition-colors py-1.5 px-4 rounded-lg hover:bg-surface-container-low cursor-pointer"
           >
             Lupa PIN?
           </button>
