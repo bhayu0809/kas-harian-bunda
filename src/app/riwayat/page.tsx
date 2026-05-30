@@ -63,7 +63,12 @@ function RiwayatForm() {
   const [activeFilter, setActiveFilter] = useState<"all" | "today" | "week" | "month">("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [limit, setLimit] = useState(10);
+
+  const SOURCES = ["Tunai", "Transfer", "E-Wallet"];
 
   // Sync state if URL query param changes
   useEffect(() => {
@@ -86,7 +91,12 @@ function RiwayatForm() {
 
     if (!matchesSearch) return false;
 
-    // 2. Date Filter matching
+    // 2. Type / category / source filters
+    if (typeFilter !== "all" && tx.type !== typeFilter) return false;
+    if (categoryFilter && tx.category !== categoryFilter) return false;
+    if (sourceFilter && tx.source !== sourceFilter) return false;
+
+    // 3. Date Filter matching
     const txDate = new Date(tx.date);
     const txDateOnly = tx.date.substring(0, 10);
     const now = new Date();
@@ -128,6 +138,12 @@ function RiwayatForm() {
 
   const hasMore = filteredTransactions.length > limit;
   const hasDateRange = Boolean(dateFrom || dateTo);
+  const hasExtraFilter = typeFilter !== "all" || categoryFilter !== "" || sourceFilter !== "";
+  const noFilters = activeFilter === "all" && search === "" && !hasDateRange && !hasExtraFilter;
+
+  // Totals over the full filtered set (not just the visible page).
+  const filteredIncome = filteredTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const filteredExpense = filteredTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
 
   const handleDelete = async (id: string, label: string) => {
     if (!confirm(`Hapus transaksi "${label}"? Tindakan ini tidak bisa dibatalkan.`)) return;
@@ -139,6 +155,9 @@ function RiwayatForm() {
     setSearch("");
     setDateFrom("");
     setDateTo("");
+    setTypeFilter("all");
+    setCategoryFilter("");
+    setSourceFilter("");
   };
 
   return (
@@ -190,12 +209,69 @@ function RiwayatForm() {
           <button
             type="button"
             onClick={clearFilters}
-            disabled={activeFilter === "all" && search === "" && !hasDateRange}
+            disabled={noFilters}
             className="min-h-12 rounded-2xl bg-surface-container-high px-5 font-body text-xs font-bold text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Reset Filter
           </button>
         </div>
+      </div>
+
+      {/* Type / Category / Source filters */}
+      <div className="bg-surface-container-lowest rounded-3xl p-4 md:p-5 shadow-soft border border-surface-container-low">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-2">
+            <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Tipe</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as "all" | "income" | "expense")}
+              className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors cursor-pointer"
+            >
+              <option value="all">Semua</option>
+              <option value="income">Pemasukan</option>
+              <option value="expense">Pengeluaran</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Kategori</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors cursor-pointer"
+            >
+              <option value="">Semua Kategori</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Dompet</label>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors cursor-pointer"
+            >
+              <option value="">Semua Dompet</option>
+              {SOURCES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Result summary */}
+        {!noFilters && (
+          <div className="mt-4 pt-4 border-t border-surface-container flex flex-wrap items-center gap-x-5 gap-y-1 font-body text-xs">
+            <span className="font-bold text-on-surface">{filteredTransactions.length} transaksi</span>
+            <span className="text-on-surface-variant">
+              Masuk <span className="text-secondary font-semibold amount">{formatRupiah(filteredIncome)}</span>
+            </span>
+            <span className="text-on-surface-variant">
+              Keluar <span className="text-error font-semibold amount">{formatRupiah(filteredExpense)}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Filter Chips */}
@@ -245,7 +321,7 @@ function RiwayatForm() {
         <button
           onClick={clearFilters}
           className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            activeFilter === "all" && search === "" && !hasDateRange
+            noFilters
               ? "bg-secondary text-on-secondary shadow-md scale-95"
               : "bg-surface-container-lowest text-on-surface-variant border border-surface-variant hover:bg-surface-container"
           }`}
