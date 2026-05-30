@@ -26,6 +26,8 @@ export interface AdviceInput {
   monthly?: BudgetStatus | null;
   savedAmount?: number;
   savingsTarget?: number;
+  /** Categories whose monthly spending has passed their per-category budget. */
+  overBudgetCategories?: { name: string; spent: number; budget: number }[];
 }
 
 const formatRupiah = (value: number) =>
@@ -36,7 +38,17 @@ const formatRupiah = (value: number) =>
 const MAX_ADVICE = 4;
 
 export function getFinancialAdvice(input: AdviceInput): Advice[] {
-  const { income, expense, topCategory, daily, weekly, monthly, savedAmount = 0, savingsTarget = 0 } = input;
+  const {
+    income,
+    expense,
+    topCategory,
+    daily,
+    weekly,
+    monthly,
+    savedAmount = 0,
+    savingsTarget = 0,
+    overBudgetCategories = [],
+  } = input;
 
   // Nothing recorded yet — guide the user to start.
   if (income === 0 && expense === 0) {
@@ -96,6 +108,22 @@ export function getFinancialAdvice(input: AdviceInput): Advice[] {
       icon: "speed",
       title: "Laju belanja terlalu cepat",
       message: "Dengan laju belanja saat ini, batas bulanan bisa terlampaui sebelum akhir bulan. Perlambat sekarang.",
+    });
+  }
+
+  // Per-category budget breach — sebut kategori yang paling besar lewatnya.
+  const worstCategory = [...overBudgetCategories].sort(
+    (a, b) => b.spent - b.budget - (a.spent - a.budget)
+  )[0];
+  if (worstCategory) {
+    advices.push({
+      id: `cat-budget-${worstCategory.name}`,
+      tone: "defensive",
+      icon: "production_quantity_limits",
+      title: `Budget "${worstCategory.name}" jebol`,
+      message: `Sudah ${formatRupiah(worstCategory.spent)} dari budget ${formatRupiah(
+        worstCategory.budget
+      )} bulan ini. Tahan belanja di kategori ini.`,
     });
   }
 

@@ -28,6 +28,7 @@ import type {
   AutoBackupFrequency,
   AutoBackupSnapshot,
   Category,
+  CategoryBudgetMap,
   RecurringTransaction,
   Transaction,
   TransactionInput,
@@ -39,10 +40,15 @@ export type {
   AutoBackupFrequency,
   AutoBackupSnapshot,
   Category,
+  CategoryBudgetMap,
+  Debt,
+  DebtKind,
   RecurringTransaction,
+  SavingsGoal,
   Transaction,
   TransactionInput,
   TransactionSource,
+  Transfer,
   TransactionTemplate,
   TransactionType,
 } from "@/lib/db/types";
@@ -91,6 +97,8 @@ interface AppContextType {
   setWeeklySpendingLimit: (amount: number) => Promise<void>;
   dailyRolloverEnabled: boolean;
   setDailyRolloverEnabled: (enabled: boolean) => Promise<void>;
+  categoryBudgets: CategoryBudgetMap;
+  setCategoryBudget: (category: string, amount: number) => Promise<void>;
   notifPermission: NotificationPermission | "unsupported";
   enableBudgetAlerts: () => Promise<boolean>;
   // security
@@ -149,6 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dailySpendingLimit, setDailySpendingLimitState] = useState(DEFAULT_DAILY_SPENDING_LIMIT);
   const [weeklySpendingLimit, setWeeklySpendingLimitState] = useState(DEFAULT_WEEKLY_SPENDING_LIMIT);
   const [dailyRolloverEnabled, setDailyRolloverEnabledState] = useState(DEFAULT_DAILY_ROLLOVER);
+  const [categoryBudgets, setCategoryBudgetsState] = useState<CategoryBudgetMap>({});
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [autoBackups, setAutoBackups] = useState<AutoBackupSnapshot[]>([]);
   const [autoBackupEnabledState, setAutoBackupEnabledState] = useState(false);
@@ -171,6 +180,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDailySpendingLimitState(Number(repo.getSetting("daily_spending_limit") ?? DEFAULT_DAILY_SPENDING_LIMIT));
     setWeeklySpendingLimitState(Number(repo.getSetting("weekly_spending_limit") ?? DEFAULT_WEEKLY_SPENDING_LIMIT));
     setDailyRolloverEnabledState((repo.getSetting("daily_rollover") ?? (DEFAULT_DAILY_ROLLOVER ? "1" : "0")) === "1");
+    setCategoryBudgetsState(repo.listCategoryBudgets());
     setPinIsDefault(auth.isPinDefault());
     setBiometricEnrolled(auth.isBiometricEnrolled());
     setAutoBackupEnabledState(autoBackup.autoBackupEnabled());
@@ -437,6 +447,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await runAutoBackupIfDue("setting_daily_rollover");
   };
 
+  const setCategoryBudget = async (category: string, amount: number) => {
+    await repo.setCategoryBudget(category, amount);
+    setCategoryBudgetsState(repo.listCategoryBudgets());
+    await runAutoBackupIfDue("setting_category_budget");
+  };
+
   const enableBudgetAlerts = async () => {
     const granted = await requestNotificationPermission();
     setNotifPermission(notificationPermission());
@@ -556,6 +572,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setWeeklySpendingLimit,
         dailyRolloverEnabled,
         setDailyRolloverEnabled,
+        categoryBudgets,
+        setCategoryBudget,
         notifPermission,
         enableBudgetAlerts,
         pinIsDefault,

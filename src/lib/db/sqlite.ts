@@ -69,6 +69,42 @@ const SCHEMA = `
     active INTEGER NOT NULL,
     lastRunMonth TEXT
   );
+  CREATE TABLE IF NOT EXISTS category_budgets (
+    category TEXT PRIMARY KEY,
+    amount INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS transfers (
+    id TEXT PRIMARY KEY,
+    amount INTEGER NOT NULL,
+    fromSource TEXT NOT NULL,
+    toSource TEXT NOT NULL,
+    date TEXT NOT NULL,
+    notes TEXT
+  );
+  CREATE TABLE IF NOT EXISTS debts (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    person TEXT NOT NULL,
+    label TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    paidAmount INTEGER NOT NULL,
+    dueDate TEXT,
+    settled INTEGER NOT NULL,
+    createdAt TEXT NOT NULL,
+    notes TEXT
+  );
+  CREATE TABLE IF NOT EXISTS savings_goals (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    targetAmount INTEGER NOT NULL,
+    savedAmount INTEGER NOT NULL,
+    icon TEXT NOT NULL,
+    createdAt TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS receipts (
+    txId TEXT PRIMARY KEY,
+    dataUrl TEXT NOT NULL
+  );
 `;
 
 function openIdb(): Promise<IDBDatabase> {
@@ -215,6 +251,7 @@ export async function resetToDefaults(): Promise<void> {
   database.run("DELETE FROM categories");
   database.run("DELETE FROM transaction_templates");
   database.run("DELETE FROM recurring_transactions");
+  database.run("DELETE FROM category_budgets");
   seedDefaults(database);
   await persistBytes(database.export());
 }

@@ -35,7 +35,7 @@ const getColorHex = (colorType: string) => {
 };
 
 export default function RingkasanPage() {
-  const { transactions, categories } = useApp();
+  const { transactions, categories, categoryBudgets } = useApp();
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
 
   // Selected month state — defaults to the current month so seeded data is visible
@@ -126,10 +126,15 @@ export default function RingkasanPage() {
       const amount = categorySummaryMap[name];
       const percentage = totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0;
       
+      const budget = categoryBudgets[name] ?? 0;
+
       return {
         name,
         amount,
         percentage,
+        budget,
+        budgetPercent: budget > 0 ? Math.min(Math.round((amount / budget) * 100), 100) : 0,
+        overBudget: budget > 0 && amount > budget,
         icon: catObj?.icon || "shopping_bag",
         colorType: catObj?.colorType || "primary",
         colorHex: getColorHex(catObj?.colorType || "primary"),
@@ -397,29 +402,46 @@ export default function RingkasanPage() {
                     return (
                       <div
                         key={item.name}
-                        className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl hover:bg-surface-container-high transition-colors group cursor-pointer"
+                        className="p-4 bg-surface-container-low rounded-2xl hover:bg-surface-container-high transition-colors group"
                       >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${catBg}`}>
-                            <span
-                              className="material-symbols-outlined text-[24px]"
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                              {item.icon}
-                            </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${catBg}`}>
+                              <span
+                                className="material-symbols-outlined text-[24px]"
+                                style={{ fontVariationSettings: "'FILL' 1" }}
+                              >
+                                {item.icon}
+                              </span>
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-headline text-sm md:text-base text-primary font-bold truncate">
+                                {item.name}
+                              </span>
+                              <span className="font-body text-xs text-on-surface-variant font-medium mt-0.5">
+                                {item.percentage}% dari seluruh pengeluaran
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-headline text-sm md:text-base text-primary font-bold truncate">
-                              {item.name}
-                            </span>
-                            <span className="font-body text-xs text-on-surface-variant font-medium mt-0.5">
-                              {item.percentage}% dari seluruh pengeluaran
-                            </span>
-                          </div>
+                          <span className="font-headline text-sm md:text-lg font-bold text-on-surface shrink-0 amount text-right">
+                            {formatRupiah(item.amount)}
+                          </span>
                         </div>
-                    <span className="font-headline text-sm md:text-lg font-bold text-on-surface shrink-0 amount text-right">
-                      {formatRupiah(item.amount)}
-                    </span>
+
+                        {item.budget > 0 && (
+                          <div className="mt-3 pl-16">
+                            <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${item.overBudget ? "bg-error" : "bg-secondary"}`}
+                                style={{ width: `${item.budgetPercent}%` }}
+                              />
+                            </div>
+                            <p className={`font-body text-[11px] mt-1 font-medium ${item.overBudget ? "text-error" : "text-on-surface-variant"}`}>
+                              {item.overBudget ? "Lewat budget " : "Budget "}
+                              <span className="amount">{formatRupiah(item.amount)}</span> / <span className="amount">{formatRupiah(item.budget)}</span>
+                            </p>
+                          </div>
+                        )}
                       </div>
                     );
                   })

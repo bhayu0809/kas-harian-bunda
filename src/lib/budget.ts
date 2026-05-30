@@ -31,6 +31,17 @@ function monthlyExpense(transactions: Transaction[], now: Date): number {
     .reduce((sum, t) => sum + t.amount, 0);
 }
 
+/** Total expense per category for the current month. */
+export function monthlyExpenseByCategory(transactions: Transaction[], now: Date = new Date()): Record<string, number> {
+  const out: Record<string, number> = {};
+  transactions.forEach((t) => {
+    const d = new Date(t.date);
+    if (t.type !== "expense" || d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return;
+    out[t.category] = (out[t.category] ?? 0) + t.amount;
+  });
+  return out;
+}
+
 function dailyExpense(transactions: Transaction[], now: Date): number {
   return transactions
     .filter((t) => {

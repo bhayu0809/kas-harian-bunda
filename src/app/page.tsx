@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { getBudgetStatus, getDailyAllowanceStatus, getWeeklySpendingStatus } from "@/lib/budget";
+import {
+  getBudgetStatus,
+  getDailyAllowanceStatus,
+  getWeeklySpendingStatus,
+  monthlyExpenseByCategory,
+} from "@/lib/budget";
 import { getFinancialAdvice } from "@/lib/advice";
 
 // Format Currency Utility Helper
@@ -54,6 +59,7 @@ export default function DashboardPage() {
     monthlyBudget,
     savedAmount,
     savingsTarget,
+    categoryBudgets,
   } = useApp();
   const router = useRouter();
 
@@ -94,6 +100,12 @@ export default function DashboardPage() {
     .map(([name, amount]) => ({ name, amount }))
     .sort((a, b) => b.amount - a.amount)[0] ?? null;
 
+  // Categories over their per-category monthly budget.
+  const spentByCategory = monthlyExpenseByCategory(transactions, now);
+  const overBudgetCategories = Object.entries(categoryBudgets)
+    .filter(([name, budget]) => budget > 0 && (spentByCategory[name] ?? 0) > budget)
+    .map(([name, budget]) => ({ name, spent: spentByCategory[name] ?? 0, budget }));
+
   // Rule-based financial advice (defensif saat minus/ketat, ofensif saat surplus).
   const advice = getFinancialAdvice({
     income: totalIncome,
@@ -104,6 +116,7 @@ export default function DashboardPage() {
     monthly: monthlyBudget > 0 ? getBudgetStatus(transactions, monthlyBudget, now) : null,
     savedAmount,
     savingsTarget,
+    overBudgetCategories,
   });
 
   const adviceTone = {

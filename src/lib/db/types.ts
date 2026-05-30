@@ -57,3 +57,40 @@ export interface Category {
   icon: string;
   colorType: CategoryColor;
 }
+
+/** Monthly spending cap for a single category (keyed by category name). */
+export type CategoryBudgetMap = Record<string, number>;
+
+/** Money moved between wallets (does not affect income/expense totals). */
+export interface Transfer {
+  id: string;
+  amount: number;
+  fromSource: TransactionSource;
+  toSource: TransactionSource;
+  date: string; // ISO string
+  notes?: string;
+}
+
+export type DebtKind = "utang" | "piutang"; // utang = kita berhutang; piutang = orang berhutang ke kita
+
+export interface Debt {
+  id: string;
+  kind: DebtKind;
+  person: string;
+  label: string;
+  amount: number;
+  paidAmount: number;
+  dueDate?: string; // ISO string (date only)
+  settled: boolean;
+  createdAt: string; // ISO string
+  notes?: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  icon: string;
+  createdAt: string; // ISO string
+}

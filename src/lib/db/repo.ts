@@ -1,5 +1,12 @@
 import { getDb, persist } from "./sqlite";
-import type { Category, RecurringTransaction, Transaction, TransactionInput, TransactionTemplate } from "./types";
+import type {
+  Category,
+  CategoryBudgetMap,
+  RecurringTransaction,
+  Transaction,
+  TransactionInput,
+  TransactionTemplate,
+} from "./types";
 
 // Thin, typed repository over the SQLite database. Reads are synchronous;
 // writes persist the database snapshot to IndexedDB before resolving.
@@ -174,9 +181,29 @@ export async function updateCategory(id: string, input: Omit<Category, "id">): P
     database.run("UPDATE transactions SET category = ? WHERE category = ?", [input.name, prev.name]);
     database.run("UPDATE transaction_templates SET category = ? WHERE category = ?", [input.name, prev.name]);
     database.run("UPDATE recurring_transactions SET category = ? WHERE category = ?", [input.name, prev.name]);
+    database.run("UPDATE OR REPLACE category_budgets SET category = ? WHERE category = ?", [input.name, prev.name]);
   }
   await persist();
   return { ...input, id };
+}
+
+// --- Category budgets (monthly cap per category) ---------------------------
+
+export function listCategoryBudgets(): CategoryBudgetMap {
+  const out: CategoryBudgetMap = {};
+  rows<{ category: string; amount: number }>("SELECT category, amount FROM category_budgets").forEach((r) => {
+    out[r.category] = Number(r.amount);
+  });
+  return out;
+}
+
+export async function setCategoryBudget(category: string, amount: number): Promise<void> {
+  if (amount > 0) {
+    getDb().run("INSERT OR REPLACE INTO category_budgets (category, amount) VALUES (?, ?)", [category, amount]);
+  } else {
+    getDb().run("DELETE FROM category_budgets WHERE category = ?", [category]);
+  }
+  await persist();
 }
 
 // --- Settings (key/value) --------------------------------------------------

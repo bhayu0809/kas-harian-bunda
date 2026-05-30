@@ -62,6 +62,9 @@ export default function PengaturanPage() {
     setWeeklySpendingLimit,
     dailyRolloverEnabled,
     setDailyRolloverEnabled,
+    categories,
+    categoryBudgets,
+    setCategoryBudget,
     notifPermission,
     enableBudgetAlerts,
   } = useApp();
@@ -77,6 +80,7 @@ export default function PengaturanPage() {
   const [weeklyLimitInput, setWeeklyLimitInput] = useState(formatNumberInput(weeklySpendingLimit));
   const [profileNameInput, setProfileNameInput] = useState(profileName);
   const [profilePhotoInput, setProfilePhotoInput] = useState(profilePhoto);
+  const [catBudgetInputs, setCatBudgetInputs] = useState<Record<string, string>>({});
   const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const profilePhotoRef = useRef<HTMLInputElement>(null);
@@ -86,6 +90,13 @@ export default function PengaturanPage() {
     setProfileNameInput(profileName);
     setProfilePhotoInput(profilePhoto);
   }, [profileName, profilePhoto]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCatBudgetInputs(
+      Object.fromEntries(categories.map((c) => [c.name, categoryBudgets[c.name] ? formatNumberInput(categoryBudgets[c.name]) : ""]))
+    );
+  }, [categories, categoryBudgets]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -153,6 +164,22 @@ export default function PengaturanPage() {
         ? "Batas pengeluaran disimpan."
         : "Pengingat pengeluaran dimatikan."
     );
+  };
+
+  const handleCatBudgetInput = (name: string, value: string) => {
+    const parsed = parseNumberInput(value);
+    setCatBudgetInputs((prev) => ({ ...prev, [name]: parsed > 0 ? formatNumberInput(parsed) : "" }));
+  };
+
+  const handleSaveCategoryBudgets = async (e: React.FormEvent) => {
+    e.preventDefault();
+    for (const cat of categories) {
+      const amount = parseNumberInput(catBudgetInputs[cat.name] ?? "");
+      if (amount !== (categoryBudgets[cat.name] ?? 0)) {
+        await setCategoryBudget(cat.name, amount);
+      }
+    }
+    notify("Budget kategori disimpan.");
   };
 
   const handleToggleRollover = async () => {
@@ -525,6 +552,46 @@ export default function PengaturanPage() {
               {notifPermission === "granted" ? "Aktif" : "Aktifkan"}
             </button>
           </div>
+        </section>
+
+        {/* Budget per Kategori */}
+        <section className={cardClass}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+              <span className="material-symbols-outlined">donut_small</span>
+            </div>
+            <h3 className="font-headline text-lg font-bold text-primary">Budget per Kategori</h3>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mb-6">
+            Tetapkan batas belanja bulanan untuk tiap kategori. Pemakaiannya tampil di halaman Ringkasan dan dipakai untuk saran keuangan. Kosong / 0 = tanpa batas.
+          </p>
+          <form onSubmit={handleSaveCategoryBudgets} className="space-y-3">
+            {categories.filter((c) => c.name !== "Pendapatan").map((cat) => (
+              <div key={cat.id} className="flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant shrink-0">{cat.icon}</span>
+                  <span className="font-body text-sm text-on-surface truncate">{cat.name}</span>
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={catBudgetInputs[cat.name] ?? ""}
+                  onChange={(e) => handleCatBudgetInput(cat.name, e.target.value)}
+                  placeholder="0"
+                  className="w-36 sm:w-44 rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3 font-body text-sm text-on-surface text-right focus:outline-none focus:border-secondary focus:ring-0 transition-colors"
+                />
+              </div>
+            ))}
+            {categories.filter((c) => c.name !== "Pendapatan").length === 0 ? (
+              <p className="rounded-2xl bg-surface-container-low p-4 font-body text-xs text-on-surface-variant">
+                Belum ada kategori pengeluaran.
+              </p>
+            ) : (
+              <div className="pt-2">
+                <button type="submit" className={primaryBtn}>Simpan Budget Kategori</button>
+              </div>
+            )}
+          </form>
         </section>
 
         {/* Template & Transaksi Berulang */}
