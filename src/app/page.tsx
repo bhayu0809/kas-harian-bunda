@@ -69,11 +69,11 @@ export default function DashboardPage() {
 
   const currentSaldo = totalIncome - totalExpense;
 
-  // Savings progress calculations
-  const progressPercent = Math.min(
-    Math.round((savedAmount / savingsTarget) * 100),
-    100
-  );
+  // Savings progress calculations (guard against an unset / zero target)
+  const progressPercent =
+    savingsTarget > 0
+      ? Math.min(Math.round((savedAmount / savingsTarget) * 100), 100)
+      : 0;
 
   // Get last 5 transactions
   const recentTransactions = transactions.slice(0, 5);
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                   Atur Target
                 </button>
               </div>
-              <h2 className="font-headline text-3xl md:text-5xl text-on-surface mt-2 font-bold tracking-tight">
+              <h2 className="font-headline text-3xl lg:text-5xl text-on-surface mt-2 font-bold tracking-tight break-words tabular-nums amount">
                 {formatRupiah(currentSaldo)}
               </h2>
               <p className="font-body text-xs text-on-surface-variant mt-2 font-medium">
@@ -136,7 +136,7 @@ export default function DashboardPage() {
                 <p className="font-body text-xs text-on-surface-variant mb-1">
                   Target Tabungan
                 </p>
-                <p className="font-headline text-xl font-bold text-secondary">
+                <p className="font-headline text-xl font-bold text-secondary amount">
                   {formatRupiah(savingsTarget)}
                 </p>
               </div>
@@ -149,7 +149,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-body text-xs text-on-surface-variant">
-                    {formatRupiah(savedAmount)} terkumpul
+                    <span className="amount">{formatRupiah(savedAmount)}</span> terkumpul
                   </span>
                   <span className="font-body text-xs font-semibold text-secondary">
                     {progressPercent}% Tercapai
@@ -221,7 +221,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Middle Section: Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Uang Masuk Card */}
           <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-soft flex items-start gap-4 hover:-translate-y-1 transition-transform duration-200">
             <div className="w-12 h-12 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
@@ -232,11 +232,11 @@ export default function DashboardPage() {
                 arrow_downward
               </span>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="font-body text-xs font-semibold text-on-surface-variant mb-1">
                 Uang Masuk
               </p>
-              <p className="font-headline text-xl md:text-2xl font-bold text-on-surface">
+              <p className="font-headline text-xl xl:text-2xl font-bold text-on-surface break-words leading-tight tabular-nums amount">
                 {formatRupiah(totalIncome)}
               </p>
             </div>
@@ -252,11 +252,11 @@ export default function DashboardPage() {
                 arrow_upward
               </span>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="font-body text-xs font-semibold text-on-surface-variant mb-1">
                 Uang Keluar
               </p>
-              <p className="font-headline text-xl md:text-2xl font-bold text-on-surface">
+              <p className="font-headline text-xl xl:text-2xl font-bold text-on-surface break-words leading-tight tabular-nums amount">
                 {formatRupiah(totalExpense)}
               </p>
             </div>
@@ -272,11 +272,11 @@ export default function DashboardPage() {
                 savings
               </span>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="font-body text-xs font-semibold text-on-surface-variant mb-1">
                 Sisa Uang
               </p>
-              <p className="font-headline text-xl md:text-2xl font-bold text-secondary">
+              <p className="font-headline text-xl xl:text-2xl font-bold text-secondary break-words leading-tight tabular-nums amount">
                 {formatRupiah(currentSaldo)}
               </p>
             </div>
@@ -355,7 +355,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <p
-                        className={`font-headline text-sm md:text-base font-bold ${
+                        className={`font-headline text-sm md:text-base font-bold amount ${
                           isExpense ? "text-on-surface" : "text-secondary"
                         }`}
                       >

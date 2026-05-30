@@ -13,7 +13,9 @@ import {
 // persistence model trivial and reliable across devices (incl. iOS Safari).
 // ---------------------------------------------------------------------------
 
-const IDB_NAME = "kas-harian";
+// Bumped from "kas-harian" to drop the old dummy-seeded database so existing
+// installs start fresh with the clean seed.
+const IDB_NAME = "kas-harian-v2";
 const IDB_STORE = "sqlite";
 const IDB_KEY = "db";
 
@@ -72,7 +74,7 @@ async function saveBytes(bytes: Uint8Array): Promise<void> {
   });
 }
 
-function seedFreshDatabase(database: Database) {
+function seedDefaults(database: Database) {
   const cat = database.prepare(
     "INSERT INTO categories (id, name, description, icon, colorType) VALUES (?,?,?,?,?)"
   );
@@ -87,7 +89,8 @@ function seedFreshDatabase(database: Database) {
   );
   tx.free();
 
-  database.run("INSERT INTO settings (key, value) VALUES (?,?), (?,?)", [
+  // INSERT OR REPLACE so this is safe to call again during a reset.
+  database.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?,?), (?,?)", [
     "savings_target",
     String(DEFAULT_SAVINGS_TARGET),
     "saved_amount",
@@ -112,10 +115,20 @@ export async function initDb(): Promise<Database> {
   } else {
     db = new SQL.Database();
     db.run(SCHEMA);
-    seedFreshDatabase(db);
+    seedDefaults(db);
     await saveBytes(db.export());
   }
   return db;
+}
+
+/** Wipe all transactions & categories and restore defaults (keeps PIN/biometric
+ *  settings). Savings figures are reset to zero. */
+export async function resetToDefaults(): Promise<void> {
+  const database = getDb();
+  database.run("DELETE FROM transactions");
+  database.run("DELETE FROM categories");
+  seedDefaults(database);
+  await saveBytes(database.export());
 }
 
 /** Current database handle (throws if used before initDb resolves). */

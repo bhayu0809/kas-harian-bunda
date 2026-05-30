@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import * as repo from "@/lib/db/repo";
 import * as auth from "@/lib/auth/credentials";
-import { initDb } from "@/lib/db/sqlite";
+import { initDb, resetToDefaults } from "@/lib/db/sqlite";
 import { exportCsv, exportDbFile, importDbFile } from "@/lib/export/exporters";
 import { DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
 import type { Category, Transaction } from "@/lib/db/types";
@@ -38,11 +38,16 @@ interface AppContextType {
   exportDb: () => void;
   exportCsvData: () => void;
   importDb: (file: File) => Promise<void>;
+  resetData: () => Promise<void>;
+  // privacy
+  hideAmounts: boolean;
+  toggleHideAmounts: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const SESSION_KEY = "kasharian_auth";
+const HIDE_AMOUNTS_KEY = "kasharian_hide_amounts";
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -54,6 +59,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pinIsDefault, setPinIsDefault] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);
+  const [hideAmounts, setHideAmounts] = useState(false);
 
   // Pull the current database state into React state.
   const refreshAll = useCallback(() => {
@@ -73,12 +79,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       refreshAll();
       setBiometricAvailable(await auth.isBiometricAvailable());
       if (sessionStorage.getItem(SESSION_KEY) === "true") setIsAuthenticated(true);
+      setHideAmounts(localStorage.getItem(HIDE_AMOUNTS_KEY) === "true");
       setIsLoaded(true);
     })().catch((err) => {
       console.error("Gagal inisialisasi database:", err);
       setIsLoaded(true);
     });
   }, [refreshAll]);
+
+  // Reflect privacy mode on <body> so the global .hide-amounts CSS rule applies.
+  useEffect(() => {
+    document.body.classList.toggle("hide-amounts", hideAmounts);
+  }, [hideAmounts]);
 
   const unlock = () => {
     setIsAuthenticated(true);
@@ -147,6 +159,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshAll();
   };
 
+  const resetData = async () => {
+    await resetToDefaults();
+    refreshAll();
+  };
+
+  const toggleHideAmounts = () => {
+    setHideAmounts((prev) => {
+      const next = !prev;
+      localStorage.setItem(HIDE_AMOUNTS_KEY, String(next));
+      return next;
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -172,6 +197,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportDb: exportDbFile,
         exportCsvData: () => exportCsv(transactions),
         importDb,
+        resetData,
+        hideAmounts,
+        toggleHideAmounts,
       }}
     >
       {children}

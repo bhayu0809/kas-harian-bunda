@@ -17,6 +17,16 @@ export default function LoginPage() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  // First-run: send the user through onboarding before the lock screen.
+  useEffect(() => {
+    if (localStorage.getItem("kasharian_onboarded") !== "true") {
+      router.replace("/onboarding");
+    } else {
+      setOnboardingChecked(true);
+    }
+  }, [router]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -58,7 +68,7 @@ export default function LoginPage() {
     else fail("Biometrik gagal. Gunakan PIN.");
   };
 
-  if (!isLoaded) return null;
+  if (!isLoaded || !onboardingChecked) return null;
 
   return (
     <main className="flex-grow flex flex-col items-center justify-center p-6 md:p-12 min-h-screen bg-background">

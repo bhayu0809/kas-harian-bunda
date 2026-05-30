@@ -251,7 +251,7 @@ function RiwayatForm() {
                       </div>
                       <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-2 shrink-0">
                         <span
-                          className={`font-headline text-lg font-bold ${
+                          className={`font-headline text-lg font-bold amount ${
                             isExpense ? "text-error" : "text-secondary"
                           }`}
                         >

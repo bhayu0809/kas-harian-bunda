@@ -193,7 +193,7 @@ export default function RingkasanPage() {
                 Total Pemasukan
               </span>
             </div>
-            <p className="font-headline text-2xl md:text-3xl font-bold text-primary">
+            <p className="font-headline text-2xl md:text-3xl font-bold text-primary amount">
               {formatRupiah(totalIncome)}
             </p>
           </div>
@@ -208,7 +208,7 @@ export default function RingkasanPage() {
                 Total Pengeluaran
               </span>
             </div>
-            <p className="font-headline text-2xl md:text-3xl font-bold text-primary">
+            <p className="font-headline text-2xl md:text-3xl font-bold text-primary amount">
               {formatRupiah(totalExpense)}
             </p>
           </div>
@@ -223,7 +223,7 @@ export default function RingkasanPage() {
                 Sisa Uang
               </span>
             </div>
-            <p className="font-headline text-2xl md:text-3xl font-bold">
+            <p className="font-headline text-2xl md:text-3xl font-bold amount">
               {formatRupiah(currentSisa)}
             </p>
           </div>
@@ -250,7 +250,7 @@ export default function RingkasanPage() {
                   <span className="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                     Total
                   </span>
-                  <span className="font-headline text-xl md:text-2xl font-bold text-primary">
+                  <span className="font-headline text-xl md:text-2xl font-bold text-primary amount">
                     {formatRupiah(totalExpense)}
                   </span>
                 </div>
@@ -311,7 +311,7 @@ export default function RingkasanPage() {
                             </span>
                           </div>
                         </div>
-                        <span className="font-headline text-base md:text-lg font-bold text-on-surface shrink-0">
+                        <span className="font-headline text-base md:text-lg font-bold text-on-surface shrink-0 amount">
                           {formatRupiah(item.amount)}
                         </span>
                       </div>

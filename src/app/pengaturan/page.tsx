@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -24,7 +25,9 @@ export default function PengaturanPage() {
     exportDb,
     exportCsvData,
     importDb,
+    resetData,
   } = useApp();
+  const router = useRouter();
 
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -76,6 +79,17 @@ export default function PengaturanPage() {
       notify("Gagal memuat file. Pastikan file .db valid.");
     }
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleReset = async () => {
+    if (!confirm("Hapus SEMUA transaksi dan kembalikan kategori ke awal? Tindakan ini tidak bisa dibatalkan.")) return;
+    await resetData();
+    notify("Semua data berhasil dihapus.");
+  };
+
+  const handleShowIntro = () => {
+    localStorage.removeItem("kasharian_onboarded");
+    router.push("/onboarding");
   };
 
   const cardClass = "bg-surface-container-lowest rounded-3xl p-6 md:p-8 shadow-soft";
@@ -212,7 +226,28 @@ export default function PengaturanPage() {
               Import / Restore (.db)
             </button>
             <input ref={fileRef} type="file" accept=".db,.sqlite,application/x-sqlite3" onChange={handleImport} className="hidden" />
+            <button onClick={handleShowIntro} className="h-12 px-6 bg-surface-container-high text-on-surface rounded-xl font-body text-sm font-semibold hover:bg-surface-container-highest active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px]">slideshow</span>
+              Lihat Intro Lagi
+            </button>
           </div>
+        </section>
+
+        {/* Zona Berbahaya */}
+        <section className="bg-error-container/30 border border-error/20 rounded-3xl p-6 md:p-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-error-container text-on-error-container flex items-center justify-center">
+              <span className="material-symbols-outlined">warning</span>
+            </div>
+            <h3 className="font-headline text-lg font-bold text-error">Zona Berbahaya</h3>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mb-6">
+            Menghapus seluruh transaksi dan mengembalikan kategori ke setelan awal. PIN &amp; biometrik tetap aman.
+          </p>
+          <button onClick={handleReset} className="h-12 px-6 bg-error text-on-error rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+            Hapus Semua Data
+          </button>
         </section>
       </div>
 

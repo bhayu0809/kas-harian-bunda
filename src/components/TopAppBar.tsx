@@ -2,6 +2,7 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
+import { useApp } from "@/context/AppContext";
 
 interface TopAppBarProps {
   onMenuClick: () => void;
@@ -9,6 +10,7 @@ interface TopAppBarProps {
 
 export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
   const pathname = usePathname();
+  const { hideAmounts, toggleHideAmounts } = useApp();
 
   // Determine headers based on path
   let title = "Halo, Bunda";
@@ -60,6 +62,16 @@ export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
 
       {/* Right actions */}
       <div className="flex items-center gap-2">
+        <button
+          aria-label={hideAmounts ? "Tampilkan nominal" : "Sembunyikan nominal"}
+          title={hideAmounts ? "Tampilkan nominal" : "Sembunyikan nominal"}
+          onClick={toggleHideAmounts}
+          className="p-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined">
+            {hideAmounts ? "visibility_off" : "visibility"}
+          </span>
+        </button>
         <button
           aria-label="Kalender"
           className="p-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer"
