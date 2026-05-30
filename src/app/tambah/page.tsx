@@ -2,20 +2,35 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useApp, Transaction } from "@/context/AppContext";
+import { useApp, TransactionType, TransactionSource } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import SuccessModal from "@/components/SuccessModal";
 
 function TambahForm() {
-  const { categories, addTransaction } = useApp();
+  const {
+    transactions,
+    templates,
+    categories,
+    addTransaction,
+    updateTransaction,
+    addTransactionTemplate,
+    addRecurringTransaction,
+  } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Get type from query params (default to expense)
   const initialType = searchParams.get("type") === "income" ? "income" : "expense";
+  const editId = searchParams.get("edit");
+  const duplicateId = searchParams.get("duplicate");
+  const templateId = searchParams.get("template");
+  const editTx = editId ? transactions.find((tx) => tx.id === editId) : undefined;
+  const duplicateTx = duplicateId ? transactions.find((tx) => tx.id === duplicateId) : undefined;
+  const selectedTemplate = templateId ? templates.find((template) => template.id === templateId) : undefined;
+  const isEditing = Boolean(editId && editTx);
 
   // Form states
-  const [type, setType] = useState<"income" | "expense">(initialType);
+  const [type, setType] = useState<TransactionType>(initialType);
   const [amount, setAmount] = useState<number>(0);
   const [amountInput, setAmountInput] = useState<string>("0");
   const [label, setLabel] = useState<string>("");
@@ -24,13 +39,16 @@ function TambahForm() {
     new Date().toISOString().substring(0, 10)
   );
   const [notes, setNotes] = useState<string>("");
-  const [source, setSource] = useState<"Tunai" | "Transfer" | "E-Wallet">("Transfer");
+  const [source, setSource] = useState<TransactionSource>("Transfer");
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [repeatMonthly, setRepeatMonthly] = useState(false);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
 
   // Update type state if searchParams change
   useEffect(() => {
     const pType = searchParams.get("type");
     if (pType === "income" || pType === "expense") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setType(pType);
       
       // Auto select default category based on type
@@ -42,14 +60,46 @@ function TambahForm() {
     }
   }, [searchParams]);
 
-  // Set default category on mount/type change if not already set
   useEffect(() => {
+    const sourceTx = editTx || duplicateTx;
+    if (sourceTx) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setType(sourceTx.type);
+      setAmount(sourceTx.amount);
+      setAmountInput(String(sourceTx.amount));
+      setLabel(sourceTx.label);
+      setCategory(sourceTx.category);
+      setDate((isEditing ? sourceTx.date : new Date().toISOString()).substring(0, 10));
+      setNotes(sourceTx.notes ?? "");
+      setSource(sourceTx.source);
+      setSaveAsTemplate(false);
+      setRepeatMonthly(false);
+      return;
+    }
+
+    if (selectedTemplate) {
+      setType(selectedTemplate.type);
+      setAmount(selectedTemplate.amount);
+      setAmountInput(String(selectedTemplate.amount));
+      setLabel(selectedTemplate.label);
+      setCategory(selectedTemplate.category);
+      setNotes(selectedTemplate.notes ?? "");
+      setSource(selectedTemplate.source);
+      setSaveAsTemplate(false);
+      setRepeatMonthly(false);
+    }
+  }, [editTx, duplicateTx, selectedTemplate, isEditing]);
+
+  // Set default category on mount/type change if not already set.
+  useEffect(() => {
+    if (category) return;
     if (type === "income") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategory("Pendapatan");
     } else {
       setCategory("Belanja Dapur");
     }
-  }, [type]);
+  }, [type, category]);
 
   const handleShorthandAmount = (value: number) => {
     const nextAmount = amount + value;
@@ -65,7 +115,12 @@ function TambahForm() {
     setAmountInput(cleanVal === "" ? "" : String(parsed));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const switchType = (nextType: TransactionType) => {
+    setType(nextType);
+    setCategory(nextType === "income" ? "Pendapatan" : "Belanja Dapur");
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount <= 0) {
       alert("Masukkan nominal transaksi yang valid.");
@@ -80,7 +135,7 @@ function TambahForm() {
     const now = new Date();
     isoDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
-    addTransaction({
+    const transactionInput = {
       label: finalLabel,
       amount,
       type,
@@ -88,7 +143,34 @@ function TambahForm() {
       date: isoDate.toISOString(),
       notes,
       source,
-    });
+    };
+
+    if (isEditing && editId) {
+      await updateTransaction(editId, transactionInput);
+    } else {
+      await addTransaction(transactionInput);
+      if (saveAsTemplate) {
+        await addTransactionTemplate({
+          label: finalLabel,
+          amount,
+          type,
+          category: transactionInput.category,
+          notes,
+          source,
+        });
+      }
+      if (repeatMonthly) {
+        await addRecurringTransaction({
+          label: finalLabel,
+          amount,
+          type,
+          category: transactionInput.category,
+          notes,
+          source,
+          dayOfMonth: isoDate.getDate(),
+        });
+      }
+    }
 
     setShowSuccess(true);
   };
@@ -99,6 +181,8 @@ function TambahForm() {
     setLabel("");
     setNotes("");
     setDate(new Date().toISOString().substring(0, 10));
+    setSaveAsTemplate(false);
+    setRepeatMonthly(false);
     setShowSuccess(false);
   };
 
@@ -117,6 +201,26 @@ function TambahForm() {
         
         {/* Left Column: Amount & Details (Spans 5 cols) */}
         <div className="lg:col-span-5 flex flex-col gap-8">
+          {templates.length > 0 && !isEditing && (
+            <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-soft">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="font-headline text-sm font-bold text-primary">Template Cepat</h3>
+                <span className="font-body text-[11px] font-semibold text-on-surface-variant">{templates.length} tersimpan</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {templates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => router.push(`/tambah?template=${template.id}`)}
+                    className="shrink-0 rounded-full bg-surface-container-low px-4 py-2 font-body text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+                  >
+                    {template.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Amount Input Card */}
           <div className="bg-surface-container-lowest rounded-[32px] p-8 shadow-lux flex flex-col items-center text-center relative overflow-hidden">
@@ -131,7 +235,7 @@ function TambahForm() {
             <div className="bg-surface-container p-1 rounded-full flex w-full max-w-xs mb-8 relative z-10 border border-surface-container-high">
               <button
                 type="button"
-                onClick={() => setType("expense")}
+                onClick={() => switchType("expense")}
                 className={`flex-1 py-3 px-4 rounded-full font-body text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                   isExpense
                     ? "bg-error-container text-on-error-container shadow-sm scale-95"
@@ -148,7 +252,7 @@ function TambahForm() {
               </button>
               <button
                 type="button"
-                onClick={() => setType("income")}
+                onClick={() => switchType("income")}
                 className={`flex-1 py-3 px-4 rounded-full font-body text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                   !isExpense
                     ? "bg-secondary-container text-on-secondary-container shadow-sm scale-95"
@@ -363,9 +467,32 @@ function TambahForm() {
                 >
                   check_circle
                 </span>
-                Simpan
+                {isEditing ? "Perbarui" : "Simpan"}
               </button>
             </div>
+
+            {!isEditing && (
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4 font-body text-xs font-semibold text-on-surface-variant cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={saveAsTemplate}
+                    onChange={(e) => setSaveAsTemplate(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Simpan sebagai template
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4 font-body text-xs font-semibold text-on-surface-variant cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={repeatMonthly}
+                    onChange={(e) => setRepeatMonthly(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Ulangi tiap bulan
+                </label>
+              </div>
+            )}
 
           </div>
         </div>
@@ -375,8 +502,16 @@ function TambahForm() {
       {/* Post transaction addition feedback */}
       <SuccessModal
         isOpen={showSuccess}
-        onGoHome={() => router.push("/")}
+        onGoHome={() => router.push(isEditing ? "/riwayat" : "/")}
         onRecordAgain={handleResetForm}
+        title={isEditing ? "Berhasil diperbarui" : "Berhasil dicatat"}
+        message={
+          isEditing
+            ? "Perubahan transaksi sudah disimpan ke riwayat."
+            : "Transaksi Anda telah berhasil ditambahkan ke dalam jurnal harian."
+        }
+        primaryLabel={isEditing ? "Kembali ke Riwayat" : "Kembali ke Beranda"}
+        showRecordAgain={!isEditing}
       />
     </div>
   );

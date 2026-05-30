@@ -3,20 +3,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { getSetting, setSetting } from "@/lib/db/repo";
-import { getBudgetStatus } from "@/lib/budget";
+import { getBudgetStatus, getDailySpendingStatus } from "@/lib/budget";
 import { cacheBudgetStatus, showLocalNotification } from "@/lib/notify";
 
-const NOTIFIED_KEY = "budget_alert_notified";
+const MONTHLY_NOTIFIED_KEY = "budget_alert_notified";
+const DAILY_NOTIFIED_KEY = "daily_spending_alert_notified";
 
-// Evaluates the monthly expense limit on data changes: drives the in-app banner and
-// fires a system notification at most once per month (when permitted).
+// Evaluates daily and monthly expense limits on data changes: drives the in-app
+// banner and fires a system notification at most once per alert period.
 export function useBudgetAlert() {
-  const { isLoaded, transactions, monthlyBudget, notifPermission } = useApp();
+  const { isLoaded, transactions, monthlyBudget, dailySpendingLimit, notifPermission } = useApp();
   const [dismissed, setDismissed] = useState(false);
 
   const status = useMemo(
-    () => getBudgetStatus(transactions, monthlyBudget),
-    [transactions, monthlyBudget]
+    () => {
+      const daily = getDailySpendingStatus(transactions, dailySpendingLimit);
+      if (daily.shouldAlert) return daily;
+      return getBudgetStatus(transactions, monthlyBudget);
+    },
+    [transactions, monthlyBudget, dailySpendingLimit]
   );
 
   useEffect(() => {
@@ -25,14 +30,16 @@ export function useBudgetAlert() {
     void cacheBudgetStatus({
       shouldAlert: status.shouldAlert,
       message: status.message,
-      monthKey: status.monthKey,
+      key: status.key,
+      title: status.title,
     });
 
     if (!status.shouldAlert) return;
 
-    if (notifPermission === "granted" && getSetting(NOTIFIED_KEY) !== status.monthKey) {
-      void showLocalNotification("Batas Pengeluaran", status.message);
-      void setSetting(NOTIFIED_KEY, status.monthKey);
+    const notifiedKey = status.key.startsWith("daily-") ? DAILY_NOTIFIED_KEY : MONTHLY_NOTIFIED_KEY;
+    if (notifPermission === "granted" && getSetting(notifiedKey) !== status.key) {
+      void showLocalNotification(status.title, status.message);
+      void setSetting(notifiedKey, status.key);
     }
   }, [isLoaded, status, notifPermission]);
 

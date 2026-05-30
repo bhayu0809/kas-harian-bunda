@@ -5,12 +5,26 @@ import * as repo from "@/lib/db/repo";
 import * as auth from "@/lib/auth/credentials";
 import { initDb, resetToDefaults } from "@/lib/db/sqlite";
 import { exportCsv, exportDbFile, importDbFile } from "@/lib/export/exporters";
-import { DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
+import { DEFAULT_DAILY_SPENDING_LIMIT, DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
 import { notificationPermission, requestNotificationPermission } from "@/lib/notify";
-import type { Category, Transaction } from "@/lib/db/types";
+import type {
+  Category,
+  RecurringTransaction,
+  Transaction,
+  TransactionInput,
+  TransactionTemplate,
+} from "@/lib/db/types";
 
 // Re-export domain types so existing pages keep importing them from here.
-export type { Category, Transaction } from "@/lib/db/types";
+export type {
+  Category,
+  RecurringTransaction,
+  Transaction,
+  TransactionInput,
+  TransactionSource,
+  TransactionTemplate,
+  TransactionType,
+} from "@/lib/db/types";
 
 interface AppContextType {
   // session
@@ -21,8 +35,17 @@ interface AppContextType {
   logout: () => void;
   // data
   transactions: Transaction[];
+  templates: TransactionTemplate[];
+  recurringTransactions: RecurringTransaction[];
   categories: Category[];
-  addTransaction: (t: Omit<Transaction, "id">) => Promise<void>;
+  addTransaction: (t: TransactionInput) => Promise<void>;
+  updateTransaction: (id: string, t: TransactionInput) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  duplicateTransaction: (id: string) => Promise<void>;
+  addTransactionTemplate: (t: Omit<TransactionTemplate, "id">) => Promise<void>;
+  deleteTransactionTemplate: (id: string) => Promise<void>;
+  addRecurringTransaction: (t: Omit<RecurringTransaction, "id" | "active" | "lastRunMonth">) => Promise<void>;
+  deleteRecurringTransaction: (id: string) => Promise<void>;
   addCategory: (c: Omit<Category, "id">) => Promise<void>;
   savingsTarget: number;
   savedAmount: number;
@@ -31,6 +54,8 @@ interface AppContextType {
   // monthly budget alerts
   monthlyBudget: number;
   setMonthlyBudget: (amount: number) => void;
+  dailySpendingLimit: number;
+  setDailySpendingLimit: (amount: number) => void;
   notifPermission: NotificationPermission | "unsupported";
   enableBudgetAlerts: () => Promise<boolean>;
   // security
@@ -59,6 +84,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [savingsTarget, setSavingsTargetState] = useState(DEFAULT_SAVINGS_TARGET);
   const [savedAmount, setSavedAmountState] = useState(DEFAULT_SAVED_AMOUNT);
@@ -67,15 +94,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);
   const [hideAmounts, setHideAmounts] = useState(false);
   const [monthlyBudget, setMonthlyBudgetState] = useState(0);
+  const [dailySpendingLimit, setDailySpendingLimitState] = useState(DEFAULT_DAILY_SPENDING_LIMIT);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
 
   // Pull the current database state into React state.
   const refreshAll = useCallback(() => {
     setTransactions(repo.listTransactions());
+    setTemplates(repo.listTransactionTemplates());
+    setRecurringTransactions(repo.listRecurringTransactions());
     setCategories(repo.listCategories());
     setSavingsTargetState(Number(repo.getSetting("savings_target") ?? DEFAULT_SAVINGS_TARGET));
     setSavedAmountState(Number(repo.getSetting("saved_amount") ?? DEFAULT_SAVED_AMOUNT));
     setMonthlyBudgetState(Number(repo.getSetting("monthly_budget") ?? 0));
+    setDailySpendingLimitState(Number(repo.getSetting("daily_spending_limit") ?? DEFAULT_DAILY_SPENDING_LIMIT));
     setPinIsDefault(auth.isPinDefault());
     setBiometricEnrolled(auth.isBiometricEnrolled());
   }, []);
@@ -85,6 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     (async () => {
       await initDb();
       await auth.ensureDefaultPin();
+      await repo.applyDueRecurringTransactions();
       refreshAll();
       setBiometricAvailable(await auth.isBiometricAvailable());
       if (sessionStorage.getItem(SESSION_KEY) === "true") setIsAuthenticated(true);
@@ -128,9 +160,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sessionStorage.removeItem(SESSION_KEY);
   };
 
-  const addTransaction = async (t: Omit<Transaction, "id">) => {
+  const addTransaction = async (t: TransactionInput) => {
     const tx = await repo.addTransaction(t);
     setTransactions((prev) => [tx, ...prev]);
+  };
+
+  const updateTransaction = async (id: string, t: TransactionInput) => {
+    const tx = await repo.updateTransaction(id, t);
+    setTransactions((prev) => prev.map((item) => (item.id === id ? tx : item)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
+
+  const deleteTransaction = async (id: string) => {
+    await repo.deleteTransaction(id);
+    setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+  };
+
+  const duplicateTransaction = async (id: string) => {
+    const now = new Date();
+    const tx = await repo.duplicateTransaction(id, now.toISOString());
+    if (tx) setTransactions((prev) => [tx, ...prev]);
+  };
+
+  const addTransactionTemplate = async (t: Omit<TransactionTemplate, "id">) => {
+    const template = await repo.addTransactionTemplate(t);
+    setTemplates((prev) => [template, ...prev]);
+  };
+
+  const deleteTransactionTemplate = async (id: string) => {
+    await repo.deleteTransactionTemplate(id);
+    setTemplates((prev) => prev.filter((template) => template.id !== id));
+  };
+
+  const addRecurringTransaction = async (t: Omit<RecurringTransaction, "id" | "active" | "lastRunMonth">) => {
+    const recurring = await repo.addRecurringTransaction(t);
+    setRecurringTransactions((prev) => [recurring, ...prev]);
+  };
+
+  const deleteRecurringTransaction = async (id: string) => {
+    await repo.deleteRecurringTransaction(id);
+    setRecurringTransactions((prev) => prev.filter((recurring) => recurring.id !== id));
   };
 
   const addCategory = async (c: Omit<Category, "id">) => {
@@ -151,6 +219,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setMonthlyBudget = (amount: number) => {
     setMonthlyBudgetState(amount);
     void repo.setSetting("monthly_budget", String(amount));
+  };
+
+  const setDailySpendingLimit = (amount: number) => {
+    setDailySpendingLimitState(amount);
+    void repo.setSetting("daily_spending_limit", String(amount));
   };
 
   const enableBudgetAlerts = async () => {
@@ -202,8 +275,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         unlockBiometric,
         logout,
         transactions,
+        templates,
+        recurringTransactions,
         categories,
         addTransaction,
+        updateTransaction,
+        deleteTransaction,
+        duplicateTransaction,
+        addTransactionTemplate,
+        deleteTransactionTemplate,
+        addRecurringTransaction,
+        deleteRecurringTransaction,
         addCategory,
         savingsTarget,
         savedAmount,
@@ -211,6 +293,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSavedAmount,
         monthlyBudget,
         setMonthlyBudget,
+        dailySpendingLimit,
+        setDailySpendingLimit,
         notifPermission,
         enableBudgetAlerts,
         pinIsDefault,

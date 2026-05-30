@@ -53,7 +53,7 @@ export async function registerPeriodicBudgetSync(): Promise<void> {
 
 /** Cache the latest budget status so the SW's periodicsync handler can read it
  *  without running sql.js. */
-export async function cacheBudgetStatus(status: { shouldAlert: boolean; message: string; monthKey: string }): Promise<void> {
+export async function cacheBudgetStatus(status: { shouldAlert: boolean; message: string; key: string; title?: string }): Promise<void> {
   try {
     const cache = await caches.open("kas-harian-meta");
     await cache.put("/__budget_status", new Response(JSON.stringify(status), { headers: { "Content-Type": "application/json" } }));

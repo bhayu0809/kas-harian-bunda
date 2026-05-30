@@ -51,7 +51,7 @@ const formatGroupDateHeader = (dateStr: string) => {
 };
 
 function RiwayatForm() {
-  const { transactions, categories } = useApp();
+  const { transactions, categories, deleteTransaction } = useApp();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -67,6 +67,7 @@ function RiwayatForm() {
   useEffect(() => {
     const q = searchParams.get("search");
     if (q !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearch(q);
     }
   }, [searchParams]);
@@ -119,6 +120,11 @@ function RiwayatForm() {
   );
 
   const hasMore = filteredTransactions.length > limit;
+
+  const handleDelete = async (id: string, label: string) => {
+    if (!confirm(`Hapus transaksi "${label}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+    await deleteTransaction(id);
+  };
 
   return (
     <div className="px-6 md:px-12 py-8 max-w-6xl mx-auto w-full space-y-8 pb-24">
@@ -249,7 +255,7 @@ function RiwayatForm() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-2 shrink-0">
+                      <div className="flex flex-col items-stretch sm:items-end gap-3 shrink-0">
                         <span
                           className={`font-headline text-lg font-bold amount ${
                             isExpense ? "text-error" : "text-secondary"
@@ -260,6 +266,35 @@ function RiwayatForm() {
                         </span>
                         <div className="text-xs font-semibold text-on-surface-variant px-3 py-1 rounded-full bg-surface-container font-body">
                           {tx.category}
+                        </div>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/tambah?edit=${tx.id}`)}
+                            aria-label="Edit transaksi"
+                            title="Edit transaksi"
+                            className="h-9 w-9 rounded-full bg-surface-container text-on-surface-variant hover:bg-secondary-container hover:text-on-secondary-container transition-colors cursor-pointer flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/tambah?duplicate=${tx.id}`)}
+                            aria-label="Catat ulang"
+                            title="Catat ulang"
+                            className="h-9 w-9 rounded-full bg-surface-container text-on-surface-variant hover:bg-secondary-container hover:text-on-secondary-container transition-colors cursor-pointer flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(tx.id, tx.label)}
+                            aria-label="Hapus transaksi"
+                            title="Hapus transaksi"
+                            className="h-9 w-9 rounded-full bg-error-container/60 text-error hover:bg-error hover:text-on-error transition-colors cursor-pointer flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
                         </div>
                       </div>
                     </div>

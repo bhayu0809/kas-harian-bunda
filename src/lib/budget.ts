@@ -4,15 +4,16 @@ import type { Transaction } from "@/lib/db/types";
 // whether the configured monthly expense limit may be hit before month-end.
 
 export interface BudgetStatus {
+  key: string;
+  title: string;
   budget: number;
   spent: number;
   remaining: number;
-  daysElapsed: number;
-  daysInMonth: number;
-  projectedSpend: number;
+  daysElapsed?: number;
+  daysInMonth?: number;
+  projectedSpend?: number;
   shouldAlert: boolean;
   exceeded: boolean;
-  monthKey: string; // "YYYY-MM" — used to de-duplicate notifications per month
   message: string;
 }
 
@@ -30,6 +31,56 @@ function monthlyExpense(transactions: Transaction[], now: Date): number {
     .reduce((sum, t) => sum + t.amount, 0);
 }
 
+function dailyExpense(transactions: Transaction[], now: Date): number {
+  return transactions
+    .filter((t) => {
+      const d = new Date(t.date);
+      return (
+        t.type === "expense" &&
+        d.getDate() === now.getDate() &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+      );
+    })
+    .reduce((sum, t) => sum + t.amount, 0);
+}
+
+function dateKey(now: Date): string {
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function monthKey(now: Date): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function getDailySpendingStatus(
+  transactions: Transaction[],
+  limit: number,
+  now: Date = new Date()
+): BudgetStatus {
+  const spent = dailyExpense(transactions, now);
+  const remaining = limit - spent;
+  const exceeded = limit > 0 && remaining <= 0;
+  const message = exceeded
+    ? `Batas pengeluaran harian sudah terlampaui — belanja hari ini ${formatRupiah(spent)} dari ${formatRupiah(limit)}.`
+    : "";
+
+  return {
+    key: `daily-${dateKey(now)}`,
+    title: "Batas Harian",
+    budget: limit,
+    spent,
+    remaining,
+    shouldAlert: exceeded,
+    exceeded,
+    message,
+  };
+}
+
 export function getBudgetStatus(
   transactions: Transaction[],
   budget: number,
@@ -40,7 +91,6 @@ export function getBudgetStatus(
   const spent = monthlyExpense(transactions, now);
   const remaining = budget - spent;
   const projectedSpend = daysElapsed > 0 ? (spent * daysInMonth) / daysElapsed : spent;
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   const exceeded = budget > 0 && remaining <= 0;
   // Require a few days of data so a single early purchase doesn't trip the alarm.
@@ -56,5 +106,17 @@ export function getBudgetStatus(
     )}. Dengan laju ini, batas pengeluaran bisa terlampaui sebelum akhir bulan.`;
   }
 
-  return { budget, spent, remaining, daysElapsed, daysInMonth, projectedSpend, shouldAlert, exceeded, monthKey, message };
+  return {
+    key: `monthly-${monthKey(now)}`,
+    title: "Batas Pengeluaran",
+    budget,
+    spent,
+    remaining,
+    daysElapsed,
+    daysInMonth,
+    projectedSpend,
+    shouldAlert,
+    exceeded,
+    message,
+  };
 }

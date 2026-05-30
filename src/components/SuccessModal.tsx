@@ -6,9 +6,21 @@ interface SuccessModalProps {
   isOpen: boolean;
   onGoHome: () => void;
   onRecordAgain: () => void;
+  title?: string;
+  message?: string;
+  primaryLabel?: string;
+  showRecordAgain?: boolean;
 }
 
-export default function SuccessModal({ isOpen, onGoHome, onRecordAgain }: SuccessModalProps) {
+export default function SuccessModal({
+  isOpen,
+  onGoHome,
+  onRecordAgain,
+  title = "Berhasil dicatat",
+  message = "Transaksi Anda telah berhasil ditambahkan ke dalam jurnal harian.",
+  primaryLabel = "Kembali ke Beranda",
+  showRecordAgain = true,
+}: SuccessModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -27,10 +39,10 @@ export default function SuccessModal({ isOpen, onGoHome, onRecordAgain }: Succes
 
         {/* Content */}
         <h2 className="font-headline text-2xl md:text-3xl font-bold text-primary mb-3">
-          Berhasil dicatat
+          {title}
         </h2>
         <p className="font-body text-sm md:text-base text-on-surface-variant mb-8 max-w-[90%]">
-          Transaksi Anda telah berhasil ditambahkan ke dalam jurnal harian.
+          {message}
         </p>
 
         {/* Action Buttons */}
@@ -39,14 +51,16 @@ export default function SuccessModal({ isOpen, onGoHome, onRecordAgain }: Succes
             onClick={onGoHome}
             className="w-full h-16 bg-primary text-on-primary rounded-xl font-body text-sm font-semibold flex items-center justify-center hover:bg-inverse-surface transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer"
           >
-            Kembali ke Beranda
+            {primaryLabel}
           </button>
-          <button
-            onClick={onRecordAgain}
-            className="w-full h-16 bg-surface-container-high text-on-surface rounded-xl font-body text-sm font-semibold flex items-center justify-center hover:bg-surface-container-highest transition-all duration-200 active:scale-[0.98] cursor-pointer"
-          >
-            Catat lagi
-          </button>
+          {showRecordAgain && (
+            <button
+              onClick={onRecordAgain}
+              className="w-full h-16 bg-surface-container-high text-on-surface rounded-xl font-body text-sm font-semibold flex items-center justify-center hover:bg-surface-container-highest transition-all duration-200 active:scale-[0.98] cursor-pointer"
+            >
+              Catat lagi
+            </button>
+          )}
         </div>
       </div>
     </div>

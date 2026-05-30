@@ -22,8 +22,14 @@ export default function PengaturanPage() {
     exportCsvData,
     importDb,
     resetData,
+    templates,
+    recurringTransactions,
+    deleteTransactionTemplate,
+    deleteRecurringTransaction,
     monthlyBudget,
     setMonthlyBudget,
+    dailySpendingLimit,
+    setDailySpendingLimit,
     notifPermission,
     enableBudgetAlerts,
   } = useApp();
@@ -32,6 +38,7 @@ export default function PengaturanPage() {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [budget, setBudget] = useState(monthlyBudget);
+  const [dailyLimit, setDailyLimit] = useState(dailySpendingLimit);
   const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +60,8 @@ export default function PengaturanPage() {
   const handleSaveBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     setMonthlyBudget(budget);
-    notify(budget > 0 ? "Batas pengeluaran disimpan." : "Pengingat pengeluaran dimatikan.");
+    setDailySpendingLimit(dailyLimit);
+    notify(budget > 0 || dailyLimit > 0 ? "Batas pengeluaran disimpan." : "Pengingat pengeluaran dimatikan.");
   };
 
   const handleEnableAlerts = async () => {
@@ -88,6 +96,16 @@ export default function PengaturanPage() {
     if (!confirm("Hapus SEMUA transaksi dan kembalikan kategori ke awal? Tindakan ini tidak bisa dibatalkan.")) return;
     await resetData();
     notify("Semua data berhasil dihapus.");
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    await deleteTransactionTemplate(id);
+    notify("Template dihapus.");
+  };
+
+  const handleDeleteRecurring = async (id: string) => {
+    await deleteRecurringTransaction(id);
+    notify("Transaksi berulang dihapus.");
   };
 
   const handleShowIntro = () => {
@@ -185,19 +203,27 @@ export default function PengaturanPage() {
             <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
               <span className="material-symbols-outlined">notifications_active</span>
             </div>
-            <h3 className="font-headline text-lg font-bold text-primary">Batas Pengeluaran Bulanan</h3>
+            <h3 className="font-headline text-lg font-bold text-primary">Batas Pengeluaran</h3>
           </div>
           <p className="font-body text-xs text-on-surface-variant mb-6">
-            Tetapkan batas belanja untuk pengingat. Dana bulan ini tetap mengikuti pemasukan yang dicatat, sedangkan batas ini hanya dipakai untuk alarm. Setel 0 untuk mematikan.
+            Tetapkan batas belanja harian dan bulanan untuk pengingat. Dana bulan ini tetap mengikuti pemasukan yang dicatat, sedangkan batas ini hanya dipakai untuk alarm. Setel 0 untuk mematikan batas terkait.
           </p>
-          <form onSubmit={handleSaveBudget} className="flex flex-col sm:flex-row gap-4 sm:items-end mb-6">
-            <div className="flex-1 flex flex-col gap-2">
+          <form onSubmit={handleSaveBudget} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:items-end mb-6">
+            <div className="flex flex-col gap-2">
               <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
-                Batas Pengeluaran ({formatRupiah(budget)})
+                Batas Harian ({formatRupiah(dailyLimit)})
+              </label>
+              <input type="number" value={dailyLimit} onChange={(e) => setDailyLimit(Number(e.target.value))} className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
+                Batas Bulanan ({formatRupiah(budget)})
               </label>
               <input type="number" value={budget} onChange={(e) => setBudget(Number(e.target.value))} className={inputClass} />
             </div>
-            <button type="submit" className={primaryBtn}>Simpan Batas</button>
+            <div className="sm:col-span-2">
+              <button type="submit" className={primaryBtn}>Simpan Batas</button>
+            </div>
           </form>
 
           <div className="flex items-center justify-between gap-4 pt-6 border-t border-surface-container">
@@ -223,6 +249,79 @@ export default function PengaturanPage() {
             >
               {notifPermission === "granted" ? "Aktif" : "Aktifkan"}
             </button>
+          </div>
+        </section>
+
+        {/* Template & Transaksi Berulang */}
+        <section className={cardClass}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+              <span className="material-symbols-outlined">bolt</span>
+            </div>
+            <h3 className="font-headline text-lg font-bold text-primary">Pencatatan Cepat</h3>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mb-6">
+            Template muncul di halaman Tambah. Transaksi berulang dibuat otomatis saat app dibuka pada bulan berjalan.
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-body text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Template</h4>
+              <div className="space-y-2">
+                {templates.length === 0 ? (
+                  <p className="rounded-2xl bg-surface-container-low p-4 font-body text-xs text-on-surface-variant">
+                    Belum ada template. Simpan dari halaman Tambah.
+                  </p>
+                ) : (
+                  templates.map((template) => (
+                    <div key={template.id} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low p-4">
+                      <div className="min-w-0">
+                        <p className="font-body text-sm font-semibold text-on-surface truncate">{template.label}</p>
+                        <p className="font-body text-xs text-on-surface-variant">{formatRupiah(template.amount)} • {template.category}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteTemplate(template.id)}
+                        className="h-9 w-9 rounded-full bg-error-container/60 text-error hover:bg-error hover:text-on-error transition-colors cursor-pointer flex items-center justify-center"
+                        aria-label="Hapus template"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-body text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Berulang Bulanan</h4>
+              <div className="space-y-2">
+                {recurringTransactions.length === 0 ? (
+                  <p className="rounded-2xl bg-surface-container-low p-4 font-body text-xs text-on-surface-variant">
+                    Belum ada transaksi berulang. Aktifkan dari halaman Tambah.
+                  </p>
+                ) : (
+                  recurringTransactions.map((recurring) => (
+                    <div key={recurring.id} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low p-4">
+                      <div className="min-w-0">
+                        <p className="font-body text-sm font-semibold text-on-surface truncate">{recurring.label}</p>
+                        <p className="font-body text-xs text-on-surface-variant">
+                          Tanggal {recurring.dayOfMonth} • {formatRupiah(recurring.amount)} • {recurring.category}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteRecurring(recurring.id)}
+                        className="h-9 w-9 rounded-full bg-error-container/60 text-error hover:bg-error hover:text-on-error transition-colors cursor-pointer flex items-center justify-center"
+                        aria-label="Hapus transaksi berulang"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </section>
 

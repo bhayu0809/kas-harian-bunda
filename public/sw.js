@@ -107,15 +107,15 @@ self.addEventListener("periodicsync", (event) => {
       if (!res) return;
       const status = await res.json();
       const notified = await cache.match("/__budget_notified");
-      const lastMonth = notified ? await notified.text() : "";
-      if (status.shouldAlert && lastMonth !== status.monthKey) {
-        await self.registration.showNotification("Batas Pengeluaran", {
+      const lastKey = notified ? await notified.text() : "";
+      if (status.shouldAlert && lastKey !== status.key) {
+        await self.registration.showNotification(status.title || "Batas Pengeluaran", {
           body: status.message,
           icon: "/icons/icon-192.png",
           badge: "/icons/icon-192.png",
           tag: "budget-alert",
         });
-        await cache.put("/__budget_notified", new Response(status.monthKey));
+        await cache.put("/__budget_notified", new Response(status.key));
       }
     })()
   );

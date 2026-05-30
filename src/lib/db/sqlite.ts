@@ -1,6 +1,7 @@
 import type { Database, SqlJsStatic } from "sql.js";
 import {
   DEFAULT_CATEGORIES,
+  DEFAULT_DAILY_SPENDING_LIMIT,
   DEFAULT_MONTHLY_BUDGET,
   DEFAULT_SAVED_AMOUNT,
   DEFAULT_SAVINGS_TARGET,
@@ -44,6 +45,27 @@ const SCHEMA = `
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS transaction_templates (
+    id TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    notes TEXT,
+    source TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS recurring_transactions (
+    id TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    notes TEXT,
+    source TEXT NOT NULL,
+    dayOfMonth INTEGER NOT NULL,
+    active INTEGER NOT NULL,
+    lastRunMonth TEXT
   );
 `;
 
@@ -91,13 +113,15 @@ function seedDefaults(database: Database) {
   tx.free();
 
   // INSERT OR REPLACE so this is safe to call again during a reset.
-  database.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?,?), (?,?), (?,?)", [
+  database.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?,?), (?,?), (?,?), (?,?)", [
     "savings_target",
     String(DEFAULT_SAVINGS_TARGET),
     "saved_amount",
     String(DEFAULT_SAVED_AMOUNT),
     "monthly_budget",
     String(DEFAULT_MONTHLY_BUDGET),
+    "daily_spending_limit",
+    String(DEFAULT_DAILY_SPENDING_LIMIT),
   ]);
 }
 
@@ -130,6 +154,8 @@ export async function resetToDefaults(): Promise<void> {
   const database = getDb();
   database.run("DELETE FROM transactions");
   database.run("DELETE FROM categories");
+  database.run("DELETE FROM transaction_templates");
+  database.run("DELETE FROM recurring_transactions");
   seedDefaults(database);
   await saveBytes(database.export());
 }

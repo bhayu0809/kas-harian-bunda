@@ -332,7 +332,20 @@ export default function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/tambah?duplicate=${tx.id}`);
+                        }}
+                        aria-label="Catat ulang"
+                        title="Catat ulang"
+                        className="hidden sm:flex h-9 w-9 rounded-full bg-surface-container text-on-surface-variant hover:bg-secondary-container hover:text-on-secondary-container transition-colors cursor-pointer items-center justify-center"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                      </button>
+                      <div>
                       <p
                         className={`font-headline text-sm md:text-base font-bold amount ${
                           isExpense ? "text-on-surface" : "text-secondary"
@@ -344,6 +357,7 @@ export default function DashboardPage() {
                       <p className="font-body text-xs text-on-surface-variant mt-1 font-medium">
                         {tx.category}
                       </p>
+                      </div>
                     </div>
                   </div>
                 );

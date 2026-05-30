@@ -24,6 +24,7 @@ export default function LoginPage() {
     if (localStorage.getItem("kasharian_onboarded") !== "true") {
       router.replace("/onboarding");
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOnboardingChecked(true);
     }
   }, [router]);

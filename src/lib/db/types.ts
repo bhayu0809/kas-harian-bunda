@@ -13,6 +13,26 @@ export interface Transaction {
   source: "Tunai" | "Transfer" | "E-Wallet";
 }
 
+export type TransactionInput = Omit<Transaction, "id">;
+export type TransactionSource = Transaction["source"];
+export type TransactionType = Transaction["type"];
+
+export interface TransactionTemplate {
+  id: string;
+  label: string;
+  amount: number;
+  type: TransactionType;
+  category: string;
+  notes?: string;
+  source: TransactionSource;
+}
+
+export interface RecurringTransaction extends TransactionTemplate {
+  dayOfMonth: number;
+  active: boolean;
+  lastRunMonth?: string;
+}
+
 export type CategoryColor =
   | "secondary"
   | "tertiary"

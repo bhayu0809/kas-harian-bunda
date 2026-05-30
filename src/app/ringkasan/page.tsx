@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useApp, Transaction } from "@/context/AppContext";
+import { useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 
 // Format Currency Utility Helper
