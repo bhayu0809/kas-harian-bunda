@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fdf9f4;
+  --foreground: #1c1c19;
+}
+
+@theme {
+  --color-secondary: #2c6956;
+  --color-inverse-primary: #c9c6bf;
+  --color-on-primary-fixed: #1c1c17;
+  --color-surface: #fdf9f4;
+  --color-surface-tint: #5f5e58;
+  --color-error: #ba1a1a;
+  --color-primary-fixed-dim: #c9c6bf;
+  --color-surface-bright: #fdf9f4;
+  --color-tertiary-fixed-dim: #ffb2b6;
+  --color-on-secondary-fixed: #002118;
+  --color-on-surface-variant: #484740;
+  --color-on-secondary-fixed-variant: #0d503f;
+  --color-primary-fixed: #e5e2da;
+  --color-on-error-container: #93000a;
+  --color-tertiary-container: #9b3d47;
+  --color-tertiary-fixed: #ffdadb;
+  --color-inverse-on-surface: #f4f0eb;
+  --color-background: #fdf9f4;
+  --color-surface-dim: #ddd9d5;
+  --color-surface-container-low: #f7f3ee;
+  --color-primary-container: #5d5c56;
+  --color-secondary-fixed-dim: #96d3bd;
+  --color-secondary-container: #aeedd5;
+  --color-surface-container-highest: #e6e2dd;
+  --color-error-container: #ffdad6;
+  --color-outline-variant: #c9c6bd;
+  --color-on-background: #1c1c19;
+  --color-outline: #78776f;
+  --color-on-surface: #1c1c19;
+  --color-on-secondary-container: #316d5b;
+  --color-on-tertiary-fixed: #40000d;
+  --color-on-tertiary-fixed-variant: #7f2833;
+  --color-on-secondary: #ffffff;
+  --color-on-primary-container: #d7d4cd;
+  --color-surface-variant: #e6e2dd;
+  --color-on-tertiary: #ffffff;
+  --color-on-primary-fixed-variant: #484741;
+  --color-surface-container: #f1ede8;
+  --color-on-primary: #ffffff;
+  --color-primary: #45453f;
+  --color-surface-container-high: #ebe8e3;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-error: #ffffff;
+  --color-secondary-fixed: #b1efd8;
+  --color-on-tertiary-container: #ffc7c9;
+  --color-inverse-surface: #31302d;
+  --color-tertiary: #7c2531;
+
+  /* Custom spacing aliases from the Stitch design system.
+     NOTE: keys like xs/sm/md/lg/xl are intentionally avoided here because in
+     Tailwind v4 they would hijack sizing utilities such as `max-w-xs`
+     (which must keep using the --container-* scale). Numeric spacing
+     utilities (p-6, gap-8, ...) are used throughout instead. */
+  --spacing-gutter: 24px;
+  --spacing-unit: 8px;
+  --spacing-tablet-margin: 48px;
+
+  /* Border Radii */
+  --radius-DEFAULT: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Font overrides */
+  --font-headline: var(--font-plus-jakarta-sans), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+
+  /* Animations (referenced via animate-* utilities) */
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-scale-up: scale-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-slide-in: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-shake: shake 0.2s ease-in-out 2;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slide-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+/* Material Symbols Icon support styling */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+/* Soft custom shadow for cards as per Stitch system */
+.shadow-soft {
+  box-shadow: 0 12px 40px -10px rgba(93, 92, 86, 0.08);
+}
+.shadow-lux {
+  box-shadow: 30px 0 60px -15px rgba(93, 92, 86, 0.08);
+}
