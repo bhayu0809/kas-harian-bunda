@@ -118,6 +118,8 @@ export default function PengaturanPage() {
     "w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-4 font-body text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-0 transition-colors";
   const primaryBtn =
     "h-12 px-6 bg-primary text-on-primary rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer";
+  const secondaryActionBtn =
+    "min-h-12 w-full sm:w-auto px-5 bg-surface-container-high text-on-surface rounded-xl font-body text-sm font-semibold hover:bg-surface-container-highest active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center";
 
   return (
     <DashboardLayout>
@@ -171,7 +173,7 @@ export default function PengaturanPage() {
           </form>
 
           {/* Biometrik */}
-          <div className="flex items-center justify-between gap-4 pt-6 border-t border-surface-container">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-surface-container">
             <div className="flex items-center gap-3 min-w-0">
               <span className="material-symbols-outlined text-secondary text-[28px]">fingerprint</span>
               <div className="min-w-0">
@@ -186,7 +188,7 @@ export default function PengaturanPage() {
             <button
               onClick={handleBiometricToggle}
               disabled={!biometricAvailable}
-              className={`shrink-0 h-11 px-5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`w-full sm:w-auto shrink-0 h-11 px-5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                 biometricEnrolled
                   ? "bg-error-container text-on-error-container hover:opacity-90"
                   : "bg-secondary-container text-on-secondary-container hover:opacity-90"
@@ -226,7 +228,7 @@ export default function PengaturanPage() {
             </div>
           </form>
 
-          <div className="flex items-center justify-between gap-4 pt-6 border-t border-surface-container">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-surface-container">
             <div className="flex items-center gap-3 min-w-0">
               <span className="material-symbols-outlined text-secondary text-[28px]">notifications</span>
               <div className="min-w-0">
@@ -245,7 +247,7 @@ export default function PengaturanPage() {
             <button
               onClick={handleEnableAlerts}
               disabled={notifPermission === "granted" || notifPermission === "unsupported" || notifPermission === "denied"}
-              className="shrink-0 h-11 px-5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-secondary-container text-on-secondary-container hover:opacity-90"
+              className="w-full sm:w-auto shrink-0 h-11 px-5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-secondary-container text-on-secondary-container hover:opacity-90"
             >
               {notifPermission === "granted" ? "Aktif" : "Aktifkan"}
             </button>
@@ -337,20 +339,20 @@ export default function PengaturanPage() {
             Semua data tersimpan secara lokal (offline) di perangkat ini menggunakan SQLite.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button onClick={exportDb} className="h-12 px-6 bg-secondary text-on-secondary rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2">
+            <button onClick={exportDb} className="min-h-12 w-full sm:w-auto px-5 bg-secondary text-on-secondary rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center">
               <span className="material-symbols-outlined text-[20px]">download</span>
               Export Backup (.db)
             </button>
-            <button onClick={exportCsvData} className="h-12 px-6 bg-surface-container-high text-on-surface rounded-xl font-body text-sm font-semibold hover:bg-surface-container-highest active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2">
+            <button onClick={exportCsvData} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">table_view</span>
               Export CSV / Excel
             </button>
-            <button onClick={() => fileRef.current?.click()} className="h-12 px-6 bg-surface-container-high text-on-surface rounded-xl font-body text-sm font-semibold hover:bg-surface-container-highest active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2">
+            <button onClick={() => fileRef.current?.click()} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">upload</span>
               Import / Restore (.db)
             </button>
             <input ref={fileRef} type="file" accept=".db,.sqlite,application/x-sqlite3" onChange={handleImport} className="hidden" />
-            <button onClick={handleShowIntro} className="h-12 px-6 bg-surface-container-high text-on-surface rounded-xl font-body text-sm font-semibold hover:bg-surface-container-highest active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2">
+            <button onClick={handleShowIntro} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">slideshow</span>
               Lihat Intro Lagi
             </button>
@@ -368,7 +370,7 @@ export default function PengaturanPage() {
           <p className="font-body text-xs text-on-surface-variant mb-6">
             Menghapus seluruh transaksi dan mengembalikan kategori ke setelan awal. PIN &amp; biometrik tetap aman.
           </p>
-          <button onClick={handleReset} className="h-12 px-6 bg-error text-on-error rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2">
+          <button onClick={handleReset} className="min-h-12 w-full sm:w-auto px-6 bg-error text-on-error rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center">
             <span className="material-symbols-outlined text-[20px]">delete_forever</span>
             Hapus Semua Data
           </button>

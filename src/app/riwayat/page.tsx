@@ -146,10 +146,10 @@ function RiwayatForm() {
       </div>
 
       {/* Filter Chips */}
-      <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:overflow-x-auto sm:pb-4 sm:scrollbar-hide">
         <button
           onClick={() => setActiveFilter("today")}
-          className={`px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === "today"
               ? "bg-secondary text-on-secondary shadow-md scale-95"
               : "bg-surface-container-lowest text-on-surface-variant border border-surface-variant hover:bg-surface-container"
@@ -159,7 +159,7 @@ function RiwayatForm() {
         </button>
         <button
           onClick={() => setActiveFilter("week")}
-          className={`px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === "week"
               ? "bg-secondary text-on-secondary shadow-md scale-95"
               : "bg-surface-container-lowest text-on-surface-variant border border-surface-variant hover:bg-surface-container"
@@ -169,7 +169,7 @@ function RiwayatForm() {
         </button>
         <button
           onClick={() => setActiveFilter("month")}
-          className={`px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === "month"
               ? "bg-secondary text-on-secondary shadow-md scale-95"
               : "bg-surface-container-lowest text-on-surface-variant border border-surface-variant hover:bg-surface-container"
@@ -182,7 +182,7 @@ function RiwayatForm() {
             setActiveFilter("all");
             setSearch("");
           }}
-          className={`px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 sm:px-8 py-3 rounded-full font-body text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-2 ${
             activeFilter === "all" && search === ""
               ? "bg-secondary text-on-secondary shadow-md scale-95"
               : "bg-surface-container-lowest text-on-surface-variant border border-surface-variant hover:bg-surface-container"

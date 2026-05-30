@@ -146,7 +146,7 @@ export default function DashboardPage() {
               onClick={() => router.push("/tambah?type=expense")}
               className="flex-1 bg-tertiary-container hover:bg-tertiary text-on-tertiary rounded-3xl p-6 shadow-lux transition-all duration-200 active:scale-[0.98] flex items-center justify-between group cursor-pointer"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 min-w-0">
                 <div className="w-14 h-14 bg-on-tertiary/20 rounded-full flex items-center justify-center">
                   <span
                     className="material-symbols-outlined text-[32px] text-white"
@@ -155,7 +155,7 @@ export default function DashboardPage() {
                     remove_circle
                   </span>
                 </div>
-                <div className="text-left">
+                <div className="text-left min-w-0">
                   <span className="font-headline text-lg md:text-xl font-bold block mb-0.5">
                     Catat Pengeluaran
                   </span>
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <span className="material-symbols-outlined text-[32px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-300">
+              <span className="hidden sm:inline material-symbols-outlined text-[32px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-300">
                 arrow_forward
               </span>
             </button>
@@ -174,7 +174,7 @@ export default function DashboardPage() {
               onClick={() => router.push("/tambah?type=income")}
               className="flex-1 bg-secondary-container hover:bg-secondary hover:text-on-secondary text-on-secondary-container rounded-3xl p-6 shadow-lux transition-all duration-200 active:scale-[0.98] flex items-center justify-between group cursor-pointer"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 min-w-0">
                 <div className="w-14 h-14 bg-secondary/15 group-hover:bg-on-secondary/20 rounded-full flex items-center justify-center transition-colors">
                   <span
                     className="material-symbols-outlined text-[32px] text-secondary group-hover:text-white"
@@ -183,7 +183,7 @@ export default function DashboardPage() {
                     add_circle
                   </span>
                 </div>
-                <div className="text-left">
+                <div className="text-left min-w-0">
                   <span className="font-headline text-lg md:text-xl font-bold block mb-0.5 group-hover:text-white">
                     Catat Pemasukan
                   </span>
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <span className="material-symbols-outlined text-[32px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-300">
+              <span className="hidden sm:inline material-symbols-outlined text-[32px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-300">
                 arrow_forward
               </span>
             </button>
@@ -264,8 +264,8 @@ export default function DashboardPage() {
 
         {/* Bottom Section: Transactions */}
         <div className="bg-surface-container-lowest rounded-3xl p-6 md:p-8 shadow-soft border border-surface-container-low">
-          <div className="flex justify-between items-end mb-6 pb-4 border-b border-surface-variant">
-            <div>
+          <div className="flex justify-between items-end gap-4 mb-6 pb-4 border-b border-surface-variant">
+            <div className="min-w-0">
               <h3 className="font-headline text-lg md:text-xl font-bold text-primary">
                 5 Transaksi Terakhir
               </h3>
@@ -275,7 +275,7 @@ export default function DashboardPage() {
             </div>
             <Link
               href="/riwayat"
-              className="font-body text-xs font-semibold text-secondary hover:text-on-secondary-container transition-colors py-2 px-4 rounded-full hover:bg-secondary-container/50 cursor-pointer"
+              className="shrink-0 font-body text-xs font-semibold text-secondary hover:text-on-secondary-container transition-colors py-2 px-3 sm:px-4 rounded-full hover:bg-secondary-container/50 cursor-pointer"
             >
               Lihat Semua
             </Link>

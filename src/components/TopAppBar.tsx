@@ -40,28 +40,28 @@ export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
   }
 
   return (
-    <header className="w-full h-24 sticky top-0 z-40 bg-surface flex justify-between items-center px-6 md:px-12 py-6 ml-auto">
-      <div className="flex items-center gap-4">
+    <header className="w-full min-h-24 sticky top-0 z-40 bg-surface flex justify-between items-center gap-3 px-4 md:px-12 py-5 md:py-6 ml-auto">
+      <div className="flex items-center gap-3 md:gap-4 min-w-0">
         {/* Mobile menu trigger */}
         <button
           aria-label="Menu"
           onClick={onMenuClick}
-          className="md:hidden p-2 rounded-full hover:bg-surface-container text-primary transition-colors cursor-pointer"
+          className="md:hidden p-2 rounded-full hover:bg-surface-container text-primary transition-colors cursor-pointer shrink-0"
         >
           <span className="material-symbols-outlined text-[28px]">menu</span>
         </button>
-        <div>
-          <h2 className="font-headline text-2xl font-bold text-primary leading-tight">
+        <div className="min-w-0">
+          <h2 className="font-headline text-xl md:text-2xl font-bold text-primary leading-tight truncate">
             {title}
           </h2>
-          <p className="font-body text-sm text-on-surface-variant">
+          <p className="font-body text-xs md:text-sm text-on-surface-variant line-clamp-2">
             {subtitle}
           </p>
         </div>
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 md:gap-2 shrink-0">
         <button
           aria-label={hideAmounts ? "Tampilkan nominal" : "Sembunyikan nominal"}
           title={hideAmounts ? "Tampilkan nominal" : "Sembunyikan nominal"}
@@ -74,7 +74,7 @@ export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
         </button>
         <button
           aria-label="Kalender"
-          className="p-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer"
+          className="hidden sm:block p-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer"
         >
           <span className="material-symbols-outlined">calendar_today</span>
         </button>

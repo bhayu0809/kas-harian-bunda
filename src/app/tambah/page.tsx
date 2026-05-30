@@ -356,14 +356,14 @@ function TambahForm() {
           {/* Categories Grid Card */}
           <div className="bg-surface-container-lowest rounded-[32px] p-8 shadow-lux flex-1 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-6 pb-2 border-b border-surface-container">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6 pb-2 border-b border-surface-container">
                 <h3 className="font-headline text-lg font-bold text-on-surface">
                   Pilih Kategori
                 </h3>
                 <button
                   type="button"
                   onClick={() => router.push("/kategori")}
-                  className="text-secondary font-body text-xs font-semibold hover:underline cursor-pointer"
+                  className="text-left sm:text-right text-secondary font-body text-xs font-semibold hover:underline cursor-pointer"
                 >
                   Kelola Kategori
                 </button>

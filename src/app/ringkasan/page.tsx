@@ -146,19 +146,19 @@ export default function RingkasanPage() {
         
         {/* Month Selector & Insight */}
         <div className="flex flex-col gap-6 lg:flex-row lg:justify-between lg:items-end">
-          <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-xl w-fit border border-surface-container-high shadow-xs">
+          <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-xl w-full sm:w-fit border border-surface-container-high shadow-xs">
             <button
               onClick={handlePrevMonth}
-              className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer"
+              className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer shrink-0"
             >
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
-            <span className="font-headline text-lg md:text-xl font-bold text-primary px-4">
+            <span className="flex-1 sm:flex-none text-center font-headline text-base md:text-xl font-bold text-primary px-2 sm:px-4 truncate">
               {currentMonthName} {currentYear}
             </span>
             <button
               onClick={handleNextMonth}
-              className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer"
+              className="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer shrink-0"
             >
               <span className="material-symbols-outlined">chevron_right</span>
             </button>
@@ -311,9 +311,9 @@ export default function RingkasanPage() {
                             </span>
                           </div>
                         </div>
-                        <span className="font-headline text-base md:text-lg font-bold text-on-surface shrink-0 amount">
-                          {formatRupiah(item.amount)}
-                        </span>
+                    <span className="font-headline text-sm md:text-lg font-bold text-on-surface shrink-0 amount text-right">
+                      {formatRupiah(item.amount)}
+                    </span>
                       </div>
                     );
                   })
