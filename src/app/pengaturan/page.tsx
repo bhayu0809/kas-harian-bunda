@@ -173,13 +173,27 @@ export default function PengaturanPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!confirm("Restore akan menimpa seluruh data saat ini. Lanjutkan?")) return;
+    const password = file.name.endsWith(".khb") ? prompt("Masukkan password backup terenkripsi.") : "";
+    if (file.name.endsWith(".khb") && !password) {
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     try {
-      await importDb(file);
+      await importDb(file, password ?? "");
       notify("Data berhasil dipulihkan.");
     } catch {
-      notify("Gagal memuat file. Pastikan file .db valid.");
+      notify("Gagal memuat file. Pastikan file/password valid.");
     }
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleExportDb = async () => {
+    try {
+      await exportDb();
+      notify("Backup terenkripsi dibuat.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Gagal membuat backup.");
+    }
   };
 
   const handleToggleAutoBackup = async () => {
@@ -627,12 +641,12 @@ export default function PengaturanPage() {
             <h3 className="font-headline text-lg font-bold text-primary">Backup & Restore Data</h3>
           </div>
           <p className="font-body text-xs text-on-surface-variant mb-6">
-            Backup .db menyimpan data lengkap: transaksi, kategori, template, transaksi berulang, batas pengeluaran, PIN, dan pengaturan lokal lainnya.
+            Backup .khb terenkripsi password menyimpan data lengkap: transaksi, kategori, template, transaksi berulang, batas pengeluaran, PIN, dan pengaturan lokal lainnya.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button onClick={exportDb} className="min-h-12 w-full sm:w-auto px-5 bg-secondary text-on-secondary rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center">
+            <button onClick={() => void handleExportDb()} className="min-h-12 w-full sm:w-auto px-5 bg-secondary text-on-secondary rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center">
               <span className="material-symbols-outlined text-[20px]">download</span>
-              Backup Data Lengkap (.db)
+              Backup Terenkripsi (.khb)
             </button>
             <button onClick={exportCsvData} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">table_view</span>
@@ -640,9 +654,9 @@ export default function PengaturanPage() {
             </button>
             <button onClick={() => fileRef.current?.click()} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">upload</span>
-              Restore dari Backup (.db)
+              Restore dari Backup
             </button>
-            <input ref={fileRef} type="file" accept=".db,.sqlite,application/x-sqlite3" onChange={handleImport} className="hidden" />
+            <input ref={fileRef} type="file" accept=".khb,.db,.sqlite,application/octet-stream,application/x-sqlite3" onChange={handleImport} className="hidden" />
             <button onClick={handleShowIntro} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">slideshow</span>
               Lihat Intro Lagi

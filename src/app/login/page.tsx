@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
-import { PIN_LENGTH } from "@/lib/auth/credentials";
+import { PIN_LENGTH, pinLockRemainingMs } from "@/lib/auth/credentials";
 
 export default function LoginPage() {
   const {
@@ -48,9 +48,17 @@ export default function LoginPage() {
   };
 
   const submitPin = async (enteredPin: string) => {
+    const remaining = pinLockRemainingMs();
+    if (remaining > 0) {
+      fail(`Terlalu banyak percobaan. Coba lagi ${Math.ceil(remaining / 1000)} detik.`);
+      return;
+    }
     const ok = await authenticate(enteredPin);
     if (ok) router.push("/");
-    else fail("PIN salah! Coba lagi.");
+    else {
+      const locked = pinLockRemainingMs();
+      fail(locked > 0 ? `PIN salah 5 kali. Coba lagi ${Math.ceil(locked / 1000)} detik.` : "PIN salah! Coba lagi.");
+    }
   };
 
   const handleKeyPress = (num: string) => {

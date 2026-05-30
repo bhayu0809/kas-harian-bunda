@@ -1,5 +1,6 @@
 import { exportBytes, replaceDb } from "@/lib/db/sqlite";
 import type { Transaction } from "@/lib/db/types";
+import { decryptBytes, encryptBytes, isEncryptedPayload } from "@/lib/crypto/vault";
 
 // Backup / restore helpers. Two export shapes:
 //  - full .db snapshot (re-importable backup)
@@ -34,6 +35,14 @@ export function exportDbFile(): void {
   download(new Blob([buffer], { type: "application/x-sqlite3" }), `kas-harian-backup-${stamp()}.db`);
 }
 
+export async function exportEncryptedDbFile(password: string): Promise<void> {
+  const bytes = exportBytes();
+  const encrypted = await encryptBytes(bytes, password);
+  const buffer = new ArrayBuffer(encrypted.byteLength);
+  new Uint8Array(buffer).set(encrypted);
+  download(new Blob([buffer], { type: "application/octet-stream" }), `kas-harian-backup-${stamp()}.khb`);
+}
+
 /** Download all transactions as a UTF-8 CSV (BOM included for Excel). */
 export function exportCsv(transactions: Transaction[]): void {
   const header = ["Tanggal", "Tipe", "Label", "Kategori", "Nominal", "Sumber", "Catatan"];
@@ -58,4 +67,10 @@ export function exportCsv(transactions: Transaction[]): void {
 export async function importDbFile(file: File): Promise<void> {
   const buffer = await file.arrayBuffer();
   await replaceDb(new Uint8Array(buffer));
+}
+
+export async function importEncryptedDbFile(file: File, password: string): Promise<void> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  await replaceDb(isEncryptedPayload(bytes) ? await decryptBytes(bytes, password) : bytes);
 }

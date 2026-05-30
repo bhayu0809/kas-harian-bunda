@@ -1,4 +1,4 @@
-import { exportBytes, replaceDb } from "@/lib/db/sqlite";
+import { exportStoredBytes, replaceStoredBytes } from "@/lib/db/sqlite";
 import { getSetting, setSetting } from "@/lib/db/repo";
 import type { AutoBackupFrequency, AutoBackupSnapshot } from "@/lib/db/types";
 
@@ -151,7 +151,7 @@ export async function listAutoBackups(): Promise<AutoBackupSnapshot[]> {
 }
 
 export async function createAutoBackup(reason = "manual"): Promise<AutoBackupSnapshot> {
-  const bytes = exportBytes();
+  const bytes = await exportStoredBytes();
   const snapshot: StoredAutoBackupSnapshot = {
     id: id(),
     createdAt: new Date().toISOString(),
@@ -175,7 +175,7 @@ export async function maybeRunAutoBackup(reason = "scheduled", now = new Date())
 export async function restoreAutoBackup(id: string): Promise<void> {
   const snapshot = await getSnapshot(id);
   if (!snapshot) throw new Error("Backup otomatis tidak ditemukan.");
-  await replaceDb(new Uint8Array(snapshot.bytes));
+  await replaceStoredBytes(new Uint8Array(snapshot.bytes));
 }
 
 export async function deleteAutoBackup(id: string): Promise<void> {

@@ -4,8 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import * as repo from "@/lib/db/repo";
 import * as auth from "@/lib/auth/credentials";
 import * as autoBackup from "@/lib/backup/autoBackups";
-import { initDb, resetToDefaults } from "@/lib/db/sqlite";
-import { exportCsv, exportDbFile, importDbFile } from "@/lib/export/exporters";
+import { closeDb, initDb, readPlaintextSettings, rekeyDb, resetStorageToDefaults, resetToDefaults } from "@/lib/db/sqlite";
+import { exportCsv, exportEncryptedDbFile, importEncryptedDbFile } from "@/lib/export/exporters";
 import { DEFAULT_DAILY_SPENDING_LIMIT, DEFAULT_PIN, DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
 import { notificationPermission, requestNotificationPermission } from "@/lib/notify";
 import type {
@@ -76,9 +76,9 @@ interface AppContextType {
   enrollBiometric: () => Promise<boolean>;
   disableBiometric: () => Promise<void>;
   // backup
-  exportDb: () => void;
+  exportDb: () => Promise<void>;
   exportCsvData: () => void;
-  importDb: (file: File) => Promise<void>;
+  importDb: (file: File, password?: string) => Promise<void>;
   autoBackups: AutoBackupSnapshot[];
   autoBackupEnabled: boolean;
   autoBackupFrequency: AutoBackupFrequency;
@@ -97,7 +97,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const SESSION_KEY = "kasharian_auth";
+const SESSION_PIN_KEY = "kasharian_vault_pin";
 const HIDE_AMOUNTS_KEY = "kasharian_hide_amounts";
+const AUTO_LOCK_MS = 5 * 60 * 1000;
 export const DEFAULT_PROFILE_NAME = "Bunda";
 export const DEFAULT_PROFILE_PHOTO =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuCwfnRzzCqobbQUUBTDt4SUidJGSygI3y1bJcoI4lDQhvp3R81mk-5Zuw7I6Q8eCp-qJgCjtKMD64al35FYraT_uXWzKlfNt3WK78l5klplDRQj-_-R2-jGKcJIk0hozbIOhSnwxsD_mtXaWoYekYf2lR2IGtLSse0Ly7nZbjGrhk9C5VwLrGXklY6gzByJuolHRWjkJk1XNMc8o9IkGOnBvdqmD1MJUFeR-TGbyOY8ZgvpRJdvCDgvJKvkEKwQKzBiIV-mt26Xg6r_";
@@ -161,16 +163,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [refreshAutoBackups]
   );
 
-  // Initialise the database once on mount.
-  useEffect(() => {
-    (async () => {
-      await initDb();
-      await auth.ensureDefaultPin();
+  const unlock = () => {
+    setIsAuthenticated(true);
+    sessionStorage.setItem(SESSION_KEY, "true");
+  };
+
+  const loadVault = useCallback(
+    async (pin: string) => {
+      await initDb(pin);
       await repo.applyDueRecurringTransactions();
       refreshAll();
       await runAutoBackupIfDue("app_open");
+    },
+    [refreshAll, runAutoBackupIfDue]
+  );
+
+  // Initialise security metadata once on mount. The encrypted database is only
+  // opened after a successful PIN check.
+  useEffect(() => {
+    (async () => {
+      auth.importLegacyPinSettings(
+        await readPlaintextSettings(["pin_hash", "pin_salt", "pin_is_default"])
+      );
+      await auth.ensureDefaultPin();
       setBiometricAvailable(await auth.isBiometricAvailable());
-      if (sessionStorage.getItem(SESSION_KEY) === "true") setIsAuthenticated(true);
+      setPinIsDefault(auth.isPinDefault());
+      setBiometricEnrolled(auth.isBiometricEnrolled());
+      const sessionPin = sessionStorage.getItem(SESSION_PIN_KEY);
+      if (sessionStorage.getItem(SESSION_KEY) === "true" && sessionPin) {
+        await loadVault(sessionPin);
+        setIsAuthenticated(true);
+      }
       setHideAmounts(localStorage.getItem(HIDE_AMOUNTS_KEY) === "true");
       setNotifPermission(notificationPermission());
       setIsLoaded(true);
@@ -178,29 +201,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error("Gagal inisialisasi database:", err);
       setIsLoaded(true);
     });
-  }, [refreshAll, runAutoBackupIfDue]);
+  }, [loadVault]);
 
   // Reflect privacy mode on <body> so the global .hide-amounts CSS rule applies.
   useEffect(() => {
     document.body.classList.toggle("hide-amounts", hideAmounts);
   }, [hideAmounts]);
 
-  const unlock = () => {
-    setIsAuthenticated(true);
-    sessionStorage.setItem(SESSION_KEY, "true");
-  };
+  const logout = useCallback(() => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_PIN_KEY);
+    closeDb();
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => logout(), AUTO_LOCK_MS);
+    };
+    const events = ["pointerdown", "keydown", "touchstart", "scroll", "visibilitychange"];
+    events.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
+    };
+  }, [isAuthenticated, logout]);
 
   const authenticate = async (pin: string) => {
+    const remaining = auth.pinLockRemainingMs();
+    if (remaining > 0) return false;
     const ok = await auth.verifyPin(pin);
-    if (ok) unlock();
+    if (ok) {
+      await loadVault(pin);
+      sessionStorage.setItem(SESSION_PIN_KEY, pin);
+      auth.clearPinLockout();
+      unlock();
+    } else {
+      auth.recordFailedPinAttempt();
+    }
     return ok;
   };
 
   const unlockBiometric = async () => {
     try {
       const ok = await auth.unlockWithBiometric();
-      if (ok) unlock();
-      return ok;
+      const sessionPin = sessionStorage.getItem(SESSION_PIN_KEY);
+      if (ok && sessionPin) {
+        await loadVault(sessionPin);
+        unlock();
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
@@ -210,7 +265,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const ok = await auth.unlockWithBiometric();
       if (!ok) return false;
+      const sessionPin = sessionStorage.getItem(SESSION_PIN_KEY);
+      if (!sessionPin) return false;
+      await loadVault(sessionPin);
+      await rekeyDb(DEFAULT_PIN);
       await auth.setPin(DEFAULT_PIN, true);
+      sessionStorage.setItem(SESSION_PIN_KEY, DEFAULT_PIN);
       setPinIsDefault(true);
       unlock();
       return true;
@@ -220,7 +280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetAppAndPin = async () => {
-    await resetToDefaults();
+    await resetStorageToDefaults(DEFAULT_PIN);
     await autoBackup.clearAutoBackups();
     await auth.setPin(DEFAULT_PIN, true);
     await auth.disableBiometric();
@@ -228,11 +288,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await refreshAutoBackups();
     setBiometricEnrolled(false);
     logout();
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem(SESSION_KEY);
   };
 
   const addTransaction = async (t: TransactionInput) => {
@@ -331,7 +386,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const changePin = async (pin: string) => {
+    await rekeyDb(pin);
     await auth.setPin(pin, false);
+    sessionStorage.setItem(SESSION_PIN_KEY, pin);
     setPinIsDefault(false);
   };
 
@@ -346,8 +403,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBiometricEnrolled(false);
   };
 
-  const importDb = async (file: File) => {
-    await importDbFile(file);
+  const exportDb = async () => {
+    const password = prompt("Masukkan password untuk backup terenkripsi (minimal 8 karakter).");
+    if (!password) return;
+    if (password.length < 8) throw new Error("Password backup minimal 8 karakter.");
+    await exportEncryptedDbFile(password);
+  };
+
+  const importDb = async (file: File, password?: string) => {
+    await importEncryptedDbFile(file, password ?? "");
     refreshAll();
     await runAutoBackupIfDue("restore_import");
   };
@@ -436,7 +500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         biometricEnrolled,
         enrollBiometric,
         disableBiometric,
-        exportDb: exportDbFile,
+        exportDb,
         exportCsvData: () => exportCsv(transactions),
         importDb,
         autoBackups,

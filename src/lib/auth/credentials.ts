@@ -1,4 +1,3 @@
-import { getSetting, setSetting } from "@/lib/db/repo";
 import { DEFAULT_PIN } from "@/lib/db/seed";
 
 // Local authentication for a single-user, offline finance vault:
@@ -11,9 +10,24 @@ const SETTING_PIN_HASH = "pin_hash";
 const SETTING_PIN_SALT = "pin_salt";
 const SETTING_PIN_DEFAULT = "pin_is_default";
 const SETTING_CREDENTIAL = "webauthn_credential_id";
+const SETTING_FAILED_COUNT = "pin_failed_count";
+const SETTING_LOCKED_UNTIL = "pin_locked_until";
 const LEGACY_DEFAULT_PIN = "1234";
 
 export const PIN_LENGTH = 6;
+const MAX_PIN_ATTEMPTS = 5;
+const LOCKOUT_MS = 30_000;
+
+const metaKey = (key: string) => `kasharian_auth_${key}`;
+
+function getMeta(key: string): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(metaKey(key));
+}
+
+function setMeta(key: string, value: string): void {
+  localStorage.setItem(metaKey(key), value);
+}
 
 // --- small encoding helpers ------------------------------------------------
 
@@ -36,21 +50,22 @@ async function sha256Hex(input: string): Promise<string> {
 export async function setPin(pin: string, isDefault = false): Promise<void> {
   const salt = toHex(crypto.getRandomValues(new Uint8Array(16)).buffer);
   const hash = await sha256Hex(salt + pin);
-  await setSetting(SETTING_PIN_SALT, salt);
-  await setSetting(SETTING_PIN_HASH, hash);
-  await setSetting(SETTING_PIN_DEFAULT, isDefault ? "1" : "0");
+  setMeta(SETTING_PIN_SALT, salt);
+  setMeta(SETTING_PIN_HASH, hash);
+  setMeta(SETTING_PIN_DEFAULT, isDefault ? "1" : "0");
+  clearPinLockout();
 }
 
 export async function verifyPin(pin: string): Promise<boolean> {
-  const salt = getSetting(SETTING_PIN_SALT);
-  const hash = getSetting(SETTING_PIN_HASH);
+  const salt = getMeta(SETTING_PIN_SALT);
+  const hash = getMeta(SETTING_PIN_HASH);
   if (!salt || !hash) return false;
   return (await sha256Hex(salt + pin)) === hash;
 }
 
 /** Seed the default PIN on first run so the user is never locked out. */
 export async function ensureDefaultPin(): Promise<void> {
-  if (!getSetting(SETTING_PIN_HASH)) {
+  if (!getMeta(SETTING_PIN_HASH)) {
     await setPin(DEFAULT_PIN, true);
     return;
   }
@@ -60,8 +75,39 @@ export async function ensureDefaultPin(): Promise<void> {
   }
 }
 
+export function importLegacyPinSettings(settings: Record<string, string | null>): void {
+  if (getMeta(SETTING_PIN_HASH)) return;
+  const hash = settings[SETTING_PIN_HASH];
+  const salt = settings[SETTING_PIN_SALT];
+  if (!hash || !salt) return;
+  setMeta(SETTING_PIN_HASH, hash);
+  setMeta(SETTING_PIN_SALT, salt);
+  setMeta(SETTING_PIN_DEFAULT, settings[SETTING_PIN_DEFAULT] === "1" ? "1" : "0");
+}
+
 export function isPinDefault(): boolean {
-  return getSetting(SETTING_PIN_DEFAULT) === "1";
+  return getMeta(SETTING_PIN_DEFAULT) === "1";
+}
+
+export function pinLockRemainingMs(): number {
+  const lockedUntil = Number(getMeta(SETTING_LOCKED_UNTIL) ?? 0);
+  return Math.max(0, lockedUntil - Date.now());
+}
+
+export function recordFailedPinAttempt(): number {
+  const next = Number(getMeta(SETTING_FAILED_COUNT) ?? 0) + 1;
+  setMeta(SETTING_FAILED_COUNT, String(next));
+  if (next >= MAX_PIN_ATTEMPTS) {
+    setMeta(SETTING_LOCKED_UNTIL, String(Date.now() + LOCKOUT_MS));
+    setMeta(SETTING_FAILED_COUNT, "0");
+    return LOCKOUT_MS;
+  }
+  return 0;
+}
+
+export function clearPinLockout(): void {
+  setMeta(SETTING_FAILED_COUNT, "0");
+  setMeta(SETTING_LOCKED_UNTIL, "0");
 }
 
 // --- Biometric (WebAuthn) ---------------------------------------------------
@@ -76,7 +122,7 @@ export async function isBiometricAvailable(): Promise<boolean> {
 }
 
 export function isBiometricEnrolled(): boolean {
-  return !!getSetting(SETTING_CREDENTIAL);
+  return !!getMeta(SETTING_CREDENTIAL);
 }
 
 export async function enrollBiometric(): Promise<boolean> {
@@ -103,12 +149,12 @@ export async function enrollBiometric(): Promise<boolean> {
   })) as PublicKeyCredential | null;
 
   if (!cred) return false;
-  await setSetting(SETTING_CREDENTIAL, toBase64(new Uint8Array(cred.rawId)));
+  setMeta(SETTING_CREDENTIAL, toBase64(new Uint8Array(cred.rawId)));
   return true;
 }
 
 export async function unlockWithBiometric(): Promise<boolean> {
-  const stored = getSetting(SETTING_CREDENTIAL);
+  const stored = getMeta(SETTING_CREDENTIAL);
   if (!stored) return false;
   const assertion = await navigator.credentials.get({
     publicKey: {
@@ -122,5 +168,5 @@ export async function unlockWithBiometric(): Promise<boolean> {
 }
 
 export async function disableBiometric(): Promise<void> {
-  await setSetting(SETTING_CREDENTIAL, "");
+  setMeta(SETTING_CREDENTIAL, "");
 }

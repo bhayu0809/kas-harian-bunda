@@ -7,6 +7,7 @@ import {
   DEFAULT_SAVINGS_TARGET,
   DEFAULT_TRANSACTIONS,
 } from "./seed";
+import { decryptBytes, encryptBytes, isEncryptedPayload } from "@/lib/crypto/vault";
 
 // ---------------------------------------------------------------------------
 // Browser-only SQLite (sql.js / WASM) with the whole database persisted as a
@@ -23,6 +24,7 @@ const IDB_KEY = "db";
 
 let SQL: SqlJsStatic | null = null;
 let db: Database | null = null;
+let dbPassword: string | null = null;
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS transactions (
@@ -125,27 +127,64 @@ function seedDefaults(database: Database) {
   ]);
 }
 
-/** Initialise the engine + database once. Loads existing data from IndexedDB
- *  or creates a freshly seeded database on first run. */
-export async function initDb(): Promise<Database> {
-  if (db) return db;
-
+async function ensureSql(): Promise<SqlJsStatic> {
   if (!SQL) {
     const initSqlJs = (await import("sql.js")).default;
     SQL = await initSqlJs({ locateFile: () => "/sql-wasm.wasm" });
   }
+  return SQL;
+}
+
+async function persistBytes(bytes: Uint8Array): Promise<void> {
+  await saveBytes(dbPassword ? await encryptBytes(bytes, dbPassword) : bytes);
+}
+
+/** Initialise the engine + database once. Loads existing data from IndexedDB
+ *  or creates a freshly seeded database on first run. When password is present,
+ *  the persisted database is encrypted at rest. */
+export async function initDb(password?: string): Promise<Database> {
+  if (db) return db;
+  if (password) dbPassword = password;
+
+  const sql = await ensureSql();
 
   const existing = await loadBytes();
   if (existing) {
-    db = new SQL.Database(existing);
+    const bytes = isEncryptedPayload(existing)
+      ? await decryptBytes(existing, password ?? "")
+      : existing;
+    db = new sql.Database(bytes);
     db.run(SCHEMA); // ensure tables exist for older blobs
+    if (!isEncryptedPayload(existing) && dbPassword) await persistBytes(db.export());
   } else {
-    db = new SQL.Database();
+    db = new sql.Database();
     db.run(SCHEMA);
     seedDefaults(db);
-    await saveBytes(db.export());
+    await persistBytes(db.export());
   }
   return db;
+}
+
+export async function readPlaintextSettings(keys: string[]): Promise<Record<string, string | null>> {
+  const existing = await loadBytes();
+  if (!existing || isEncryptedPayload(existing)) return {};
+
+  const sql = await ensureSql();
+  const tmp = new sql.Database(existing);
+  try {
+    tmp.run(SCHEMA);
+    const out: Record<string, string | null> = {};
+    const stmt = tmp.prepare("SELECT value FROM settings WHERE key = ?");
+    keys.forEach((key) => {
+      stmt.bind([key]);
+      out[key] = stmt.step() ? (stmt.getAsObject().value as string) : null;
+      stmt.reset();
+    });
+    stmt.free();
+    return out;
+  } finally {
+    tmp.close();
+  }
 }
 
 /** Wipe all transactions & categories and restore defaults (keeps PIN/biometric
@@ -157,7 +196,17 @@ export async function resetToDefaults(): Promise<void> {
   database.run("DELETE FROM transaction_templates");
   database.run("DELETE FROM recurring_transactions");
   seedDefaults(database);
-  await saveBytes(database.export());
+  await persistBytes(database.export());
+}
+
+export async function resetStorageToDefaults(password?: string): Promise<void> {
+  if (password) dbPassword = password;
+  const sql = await ensureSql();
+  db?.close();
+  db = new sql.Database();
+  db.run(SCHEMA);
+  seedDefaults(db);
+  await persistBytes(db.export());
 }
 
 /** Current database handle (throws if used before initDb resolves). */
@@ -168,19 +217,40 @@ export function getDb(): Database {
 
 /** Replace the active database (used by import / restore) and persist it. */
 export async function replaceDb(bytes: Uint8Array): Promise<Database> {
-  if (!SQL) throw new Error("SQL engine belum siap.");
-  db = new SQL.Database(bytes);
+  const sql = await ensureSql();
+  db = new sql.Database(bytes);
   db.run(SCHEMA);
-  await saveBytes(db.export());
+  await persistBytes(db.export());
   return db;
 }
 
 /** Snapshot the whole database to IndexedDB. Call after every write. */
 export async function persist(): Promise<void> {
-  if (db) await saveBytes(db.export());
+  if (db) await persistBytes(db.export());
 }
 
 /** Raw bytes of the current database (used for .db export). */
 export function exportBytes(): Uint8Array {
   return getDb().export();
+}
+
+export async function exportStoredBytes(): Promise<Uint8Array> {
+  const bytes = exportBytes();
+  return dbPassword ? encryptBytes(bytes, dbPassword) : bytes;
+}
+
+export async function replaceStoredBytes(bytes: Uint8Array): Promise<Database> {
+  const plain = isEncryptedPayload(bytes) ? await decryptBytes(bytes, dbPassword ?? "") : bytes;
+  return replaceDb(plain);
+}
+
+export async function rekeyDb(password: string): Promise<void> {
+  dbPassword = password;
+  await persist();
+}
+
+export function closeDb(): void {
+  db?.close();
+  db = null;
+  dbPassword = null;
 }
