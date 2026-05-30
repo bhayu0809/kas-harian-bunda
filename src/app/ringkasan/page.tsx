@@ -146,6 +146,25 @@ export default function RingkasanPage() {
   // Calculate largest expense category for insight
   const largestExpenseCategory = categorySummaryList.length > 0 ? categorySummaryList[0].name : null;
 
+  // 6-month trend ending at the selected month (income vs expense per month).
+  const trendMonths = Array.from({ length: 6 }).map((_, i) => {
+    const d = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - (5 - i), 1);
+    const inMonth = transactions.filter((t) => {
+      const td = new Date(t.date);
+      return td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear();
+    });
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: shortMonthNames[d.getMonth()],
+      year: d.getFullYear(),
+      income: inMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+      expense: inMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+    };
+  });
+  const trendMax = Math.max(1, ...trendMonths.map((m) => Math.max(m.income, m.expense)));
+  const prevExpense = trendMonths[4].expense;
+  const expenseDelta = prevExpense > 0 ? Math.round(((totalExpense - prevExpense) / prevExpense) * 100) : totalExpense > 0 ? 100 : 0;
+
   // Generate Conic Gradient string for CSS Doughnut Chart representation
   let conicGradientStyle = "conic-gradient(#e6e2dd 0% 100%)";
   if (totalExpense > 0 && categorySummaryList.length > 0) {
@@ -337,6 +356,63 @@ export default function RingkasanPage() {
             <p className="font-headline text-2xl md:text-3xl font-bold amount">
               {formatRupiah(currentSisa)}
             </p>
+          </div>
+        </div>
+
+        {/* Tren 6 Bulan + perbandingan */}
+        <div className="bg-surface-container-lowest rounded-3xl p-6 md:p-8 shadow-lux">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
+            <div>
+              <h3 className="font-headline text-lg font-bold text-primary">Tren 6 Bulan</h3>
+              <p className="font-body text-xs text-on-surface-variant mt-1 font-medium">Pemasukan vs pengeluaran per bulan</p>
+            </div>
+            <div className="flex items-center gap-2 font-body text-xs">
+              <span className="text-on-surface-variant">vs bulan lalu</span>
+              <span
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold ${
+                  expenseDelta > 0
+                    ? "bg-error-container text-on-error-container"
+                    : expenseDelta < 0
+                    ? "bg-secondary-container text-on-secondary-container"
+                    : "bg-surface-container text-on-surface-variant"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {expenseDelta > 0 ? "trending_up" : expenseDelta < 0 ? "trending_down" : "trending_flat"}
+                </span>
+                {expenseDelta > 0 ? "+" : ""}{expenseDelta}% belanja
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-end justify-between gap-2 sm:gap-4 h-44">
+            {trendMonths.map((m) => {
+              const isCurrent = m.key === `${selectedDate.getFullYear()}-${selectedDate.getMonth()}`;
+              return (
+                <div key={m.key} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                  <div className="w-full flex items-end justify-center gap-1 h-32">
+                    <div
+                      className="w-1/2 max-w-[18px] rounded-t-md bg-secondary/80 transition-all duration-500"
+                      style={{ height: `${Math.max((m.income / trendMax) * 100, m.income > 0 ? 4 : 0)}%` }}
+                      title={`Masuk ${formatRupiah(m.income)}`}
+                    />
+                    <div
+                      className="w-1/2 max-w-[18px] rounded-t-md bg-error/70 transition-all duration-500"
+                      style={{ height: `${Math.max((m.expense / trendMax) * 100, m.expense > 0 ? 4 : 0)}%` }}
+                      title={`Keluar ${formatRupiah(m.expense)}`}
+                    />
+                  </div>
+                  <span className={`font-body text-[11px] truncate ${isCurrent ? "text-primary font-bold" : "text-on-surface-variant"}`}>
+                    {m.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-center gap-6 mt-6 font-body text-xs text-on-surface-variant">
+            <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-secondary/80" /> Pemasukan</span>
+            <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-error/70" /> Pengeluaran</span>
           </div>
         </div>
 
