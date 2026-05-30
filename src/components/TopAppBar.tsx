@@ -10,10 +10,10 @@ interface TopAppBarProps {
 
 export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
   const pathname = usePathname();
-  const { hideAmounts, toggleHideAmounts } = useApp();
+  const { hideAmounts, toggleHideAmounts, profileName, profilePhoto } = useApp();
 
   // Determine headers based on path
-  let title = "Halo, Bunda";
+  let title = `Halo, ${profileName}`;
   let subtitle = "Ringkasan kas hari ini.";
 
   switch (pathname) {
@@ -87,9 +87,9 @@ export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
         </button>
         <div className="hidden md:block w-12 h-12 rounded-full overflow-hidden border-2 border-surface-container ml-2">
           <img
-            alt="Bunda Profile Avatar"
+            alt={`${profileName} Profile Avatar`}
             className="w-full h-full object-cover"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwfnRzzCqobbQUUBTDt4SUidJGSygI3y1bJcoI4lDQhvp3R81mk-5Zuw7I6Q8eCp-qJgCjtKMD64al35FYraT_uXWzKlfNt3WK78l5klplDRQj-_-R2-jGKcJIk0hozbIOhSnwxsD_mtXaWoYekYf2lR2IGtLSse0Ly7nZbjGrhk9C5VwLrGXklY6gzByJuolHRWjkJk1XNMc8o9IkGOnBvdqmD1MJUFeR-TGbyOY8ZgvpRJdvCDgvJKvkEKwQKzBiIV-mt26Xg6r_"
+            src={profilePhoto}
           />
         </div>
       </div>

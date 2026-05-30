@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AutoBackupFrequency, useApp } from "@/context/AppContext";
+import { AutoBackupFrequency, DEFAULT_PROFILE_PHOTO, useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const formatRupiah = (value: number) =>
@@ -49,6 +49,9 @@ export default function PengaturanPage() {
     recurringTransactions,
     deleteTransactionTemplate,
     deleteRecurringTransaction,
+    profileName,
+    profilePhoto,
+    setProfile,
     monthlyBudget,
     setMonthlyBudget,
     dailySpendingLimit,
@@ -62,8 +65,17 @@ export default function PengaturanPage() {
   const [confirmPin, setConfirmPin] = useState("");
   const [budget, setBudget] = useState(monthlyBudget);
   const [dailyLimit, setDailyLimit] = useState(dailySpendingLimit);
+  const [profileNameInput, setProfileNameInput] = useState(profileName);
+  const [profilePhotoInput, setProfilePhotoInput] = useState(profilePhoto);
   const [toast, setToast] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const profilePhotoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setProfileNameInput(profileName);
+    setProfilePhotoInput(profilePhoto);
+  }, [profileName, profilePhoto]);
 
   const notify = (msg: string) => {
     setToast(msg);
@@ -78,6 +90,37 @@ export default function PengaturanPage() {
     setNewPin("");
     setConfirmPin("");
     notify("PIN berhasil diperbarui.");
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await setProfile(profileNameInput, profilePhotoInput);
+    notify("Profil berhasil diperbarui.");
+  };
+
+  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      notify("Pilih file gambar untuk foto profil.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      notify("Ukuran foto maksimal 2 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setProfilePhotoInput(reader.result);
+    };
+    reader.onerror = () => notify("Gagal membaca foto profil.");
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetProfilePhoto = () => {
+    setProfilePhotoInput(DEFAULT_PROFILE_PHOTO);
+    if (profilePhotoRef.current) profilePhotoRef.current.value = "";
   };
 
   const handleSaveBudget = async (e: React.FormEvent) => {
@@ -179,6 +222,64 @@ export default function PengaturanPage() {
   return (
     <DashboardLayout>
       <div className="px-6 md:px-12 py-8 max-w-5xl mx-auto w-full space-y-8 pb-24">
+        {/* Profil */}
+        <section className={cardClass}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+              <span className="material-symbols-outlined">account_circle</span>
+            </div>
+            <h3 className="font-headline text-lg font-bold text-primary">Profil Pengguna</h3>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mb-6">
+            Nama dan foto ini muncul di header dan menu samping. Data disimpan lokal dan ikut masuk ke backup.
+          </p>
+
+          <form onSubmit={handleSaveProfile} className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-6 items-start">
+            <div className="flex flex-col items-start gap-3">
+              <img
+                alt="Foto profil"
+                src={profilePhotoInput}
+                className="w-24 h-24 rounded-3xl object-cover border-2 border-surface-container-highest bg-surface-container-low"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => profilePhotoRef.current?.click()}
+                  className="h-10 w-10 rounded-full bg-secondary-container text-on-secondary-container hover:bg-secondary hover:text-on-secondary transition-colors cursor-pointer flex items-center justify-center"
+                  aria-label="Pilih foto profil"
+                >
+                  <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetProfilePhoto}
+                  className="h-10 w-10 rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-center"
+                  aria-label="Reset foto profil"
+                >
+                  <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                </button>
+              </div>
+              <input ref={profilePhotoRef} type="file" accept="image/*" onChange={handleProfilePhotoChange} className="hidden" />
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="font-body text-xs font-bold text-on-surface-variant pl-1">Nama Pengguna</label>
+                <input
+                  type="text"
+                  value={profileNameInput}
+                  onChange={(e) => setProfileNameInput(e.target.value)}
+                  placeholder="Bunda"
+                  className={inputClass}
+                />
+              </div>
+              <button type="submit" className={primaryBtn}>
+                Simpan Profil
+              </button>
+            </div>
+          </form>
+        </section>
+
         {/* Keamanan */}
         <section className={cardClass}>
           <div className="flex items-center gap-3 mb-6">

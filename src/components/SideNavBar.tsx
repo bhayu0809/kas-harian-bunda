@@ -11,7 +11,7 @@ interface SideNavBarProps {
 
 export default function SideNavBar({ onCloseMobile }: SideNavBarProps) {
   const pathname = usePathname();
-  const { logout } = useApp();
+  const { logout, profileName, profilePhoto } = useApp();
 
   const menuItems = [
     { name: "Beranda", icon: "home", path: "/" },
@@ -81,13 +81,13 @@ export default function SideNavBar({ onCloseMobile }: SideNavBarProps) {
           className="flex items-center gap-4 p-4 rounded-xl bg-surface-container-high hover:bg-red-50 hover:text-red-700 transition-all duration-200 cursor-pointer group"
         >
           <img
-            alt="Bunda Profile Avatar"
+            alt={`${profileName} Profile Avatar`}
             className="w-10 h-10 rounded-full object-cover border-2 border-surface group-hover:border-red-200 transition-colors"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwfnRzzCqobbQUUBTDt4SUidJGSygI3y1bJcoI4lDQhvp3R81mk-5Zuw7I6Q8eCp-qJgCjtKMD64al35FYraT_uXWzKlfNt3WK78l5klplDRQj-_-R2-jGKcJIk0hozbIOhSnwxsD_mtXaWoYekYf2lR2IGtLSse0Ly7nZbjGrhk9C5VwLrGXklY6gzByJuolHRWjkJk1XNMc8o9IkGOnBvdqmD1MJUFeR-TGbyOY8ZgvpRJdvCDgvJKvkEKwQKzBiIV-mt26Xg6r_"
+            src={profilePhoto}
           />
           <div className="flex-1 min-w-0">
             <p className="font-body text-sm font-semibold text-on-surface group-hover:text-red-700 truncate">
-              Bunda
+              {profileName}
             </p>
             <p className="font-body text-xs text-on-surface-variant group-hover:text-red-600 truncate">
               Keluar Sesi

@@ -52,6 +52,9 @@ interface AppContextType {
   addRecurringTransaction: (t: Omit<RecurringTransaction, "id" | "active" | "lastRunMonth">) => Promise<void>;
   deleteRecurringTransaction: (id: string) => Promise<void>;
   addCategory: (c: Omit<Category, "id">) => Promise<void>;
+  profileName: string;
+  profilePhoto: string;
+  setProfile: (name: string, photo: string) => Promise<void>;
   savingsTarget: number;
   savedAmount: number;
   setSavingsTarget: (target: number) => Promise<void>;
@@ -93,6 +96,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const SESSION_KEY = "kasharian_auth";
 const HIDE_AMOUNTS_KEY = "kasharian_hide_amounts";
+export const DEFAULT_PROFILE_NAME = "Bunda";
+export const DEFAULT_PROFILE_PHOTO =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCwfnRzzCqobbQUUBTDt4SUidJGSygI3y1bJcoI4lDQhvp3R81mk-5Zuw7I6Q8eCp-qJgCjtKMD64al35FYraT_uXWzKlfNt3WK78l5klplDRQj-_-R2-jGKcJIk0hozbIOhSnwxsD_mtXaWoYekYf2lR2IGtLSse0Ly7nZbjGrhk9C5VwLrGXklY6gzByJuolHRWjkJk1XNMc8o9IkGOnBvdqmD1MJUFeR-TGbyOY8ZgvpRJdvCDgvJKvkEKwQKzBiIV-mt26Xg6r_";
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -101,6 +107,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [profileName, setProfileNameState] = useState(DEFAULT_PROFILE_NAME);
+  const [profilePhoto, setProfilePhotoState] = useState(DEFAULT_PROFILE_PHOTO);
   const [savingsTarget, setSavingsTargetState] = useState(DEFAULT_SAVINGS_TARGET);
   const [savedAmount, setSavedAmountState] = useState(DEFAULT_SAVED_AMOUNT);
   const [pinIsDefault, setPinIsDefault] = useState(false);
@@ -123,6 +131,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTemplates(repo.listTransactionTemplates());
     setRecurringTransactions(repo.listRecurringTransactions());
     setCategories(repo.listCategories());
+    setProfileNameState(repo.getSetting("profile_name") || DEFAULT_PROFILE_NAME);
+    setProfilePhotoState(repo.getSetting("profile_photo") || DEFAULT_PROFILE_PHOTO);
     setSavingsTargetState(Number(repo.getSetting("savings_target") ?? DEFAULT_SAVINGS_TARGET));
     setSavedAmountState(Number(repo.getSetting("saved_amount") ?? DEFAULT_SAVED_AMOUNT));
     setMonthlyBudgetState(Number(repo.getSetting("monthly_budget") ?? 0));
@@ -254,6 +264,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await runAutoBackupIfDue("category_add");
   };
 
+  const setProfile = async (name: string, photo: string) => {
+    const nextName = name.trim() || DEFAULT_PROFILE_NAME;
+    const nextPhoto = photo || DEFAULT_PROFILE_PHOTO;
+    setProfileNameState(nextName);
+    setProfilePhotoState(nextPhoto);
+    await repo.setSetting("profile_name", nextName);
+    await repo.setSetting("profile_photo", nextPhoto);
+    await runAutoBackupIfDue("setting_profile");
+  };
+
   const setSavingsTarget = async (target: number) => {
     setSavingsTargetState(target);
     await repo.setSetting("savings_target", String(target));
@@ -369,6 +389,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addRecurringTransaction,
         deleteRecurringTransaction,
         addCategory,
+        profileName,
+        profilePhoto,
+        setProfile,
         savingsTarget,
         savedAmount,
         setSavingsTarget,
