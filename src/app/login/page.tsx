@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
+import { PIN_LENGTH } from "@/lib/auth/credentials";
 
 export default function LoginPage() {
   const {
     authenticate,
     unlockBiometric,
+    resetPinWithBiometric,
+    resetAppAndPin,
     biometricAvailable,
     biometricEnrolled,
     isAuthenticated,
@@ -18,6 +21,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [showForgotPin, setShowForgotPin] = useState(false);
 
   // First-run: send the user through onboarding before the lock screen.
   useEffect(() => {
@@ -34,7 +38,7 @@ export default function LoginPage() {
     if (isLoaded && isAuthenticated) router.push("/");
   }, [isAuthenticated, isLoaded, router]);
 
-  const showBiometric = biometricAvailable && biometricEnrolled;
+  const showBiometric = biometricAvailable;
 
   const fail = (message: string) => {
     setError(message);
@@ -51,10 +55,10 @@ export default function LoginPage() {
 
   const handleKeyPress = (num: string) => {
     if (error) setError("");
-    if (pin.length >= 4) return;
+    if (pin.length >= PIN_LENGTH) return;
     const nextPin = pin + num;
     setPin(nextPin);
-    if (nextPin.length === 4) submitPin(nextPin);
+    if (nextPin.length === PIN_LENGTH) submitPin(nextPin);
   };
 
   const handleBackspace = () => {
@@ -64,9 +68,33 @@ export default function LoginPage() {
 
   const handleBiometric = async () => {
     setError("");
+    if (!biometricEnrolled) {
+      fail("Biometrik belum diaktifkan. Masuk dengan PIN lalu aktifkan di Pengaturan.");
+      return;
+    }
     const ok = await unlockBiometric();
     if (ok) router.push("/");
     else fail("Biometrik gagal. Gunakan PIN.");
+  };
+
+  const handleResetPinWithBiometric = async () => {
+    setError("");
+    const ok = await resetPinWithBiometric();
+    if (ok) {
+      alert("PIN berhasil direset ke 123456. Silakan ganti PIN di Pengaturan.");
+      router.push("/");
+    } else {
+      fail("Reset PIN via biometrik gagal.");
+    }
+    setShowForgotPin(false);
+  };
+
+  const handleResetAppAndPin = async () => {
+    if (!confirm("Ini akan menghapus semua data lokal dan mengatur PIN kembali ke 123456. Lanjutkan?")) return;
+    await resetAppAndPin();
+    setPin("");
+    setShowForgotPin(false);
+    alert("Aplikasi direset. PIN sekarang 123456.");
   };
 
   if (!isLoaded || !onboardingChecked) return null;
@@ -94,7 +122,7 @@ export default function LoginPage() {
 
         {/* PIN Indicator Dots */}
         <div className={`flex justify-center gap-6 mb-12 h-4 ${shake ? "animate-shake" : ""}`}>
-          {[0, 1, 2, 3].map((index) => {
+          {Array.from({ length: PIN_LENGTH }).map((_, index) => {
             const hasValue = pin.length > index;
             return (
               <div
@@ -174,25 +202,66 @@ export default function LoginPage() {
               className="w-full max-w-xs h-16 bg-secondary-container text-on-secondary-container font-body text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined">fingerprint</span>
-              Buka dengan Sidik Jari / Face ID
+              {biometricEnrolled ? "Buka dengan Sidik Jari / Face ID" : "Biometrik Belum Aktif"}
             </button>
           )}
           <button
             onClick={() => submitPin(pin)}
-            disabled={pin.length < 4}
+            disabled={pin.length < PIN_LENGTH}
             type="button"
             className="w-full max-w-xs h-16 bg-primary text-on-primary font-body text-sm font-semibold rounded-xl flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             Masuk
           </button>
           <button
-            onClick={() => alert("PIN default adalah 1234. Ubah PIN di halaman Pengaturan.")}
+            onClick={() => setShowForgotPin(true)}
             className="font-body text-xs text-secondary hover:text-on-secondary-container transition-colors py-2 px-4 rounded-lg hover:bg-surface-container-low cursor-pointer"
           >
             Lupa PIN?
           </button>
         </div>
       </div>
+
+      {showForgotPin && (
+        <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="w-full max-w-[380px] rounded-3xl bg-surface p-6 shadow-soft animate-fade-in">
+            <div className="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined">lock_reset</span>
+            </div>
+            <h2 className="font-headline text-xl font-bold text-primary mb-2">Lupa PIN?</h2>
+            <p className="font-body text-sm text-on-surface-variant mb-5">
+              PIN tidak bisa dibaca ulang karena disimpan sebagai hash. Kalau biometrik sudah aktif, PIN bisa direset ke 123456 setelah verifikasi perangkat.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleResetPinWithBiometric}
+                disabled={!biometricAvailable || !biometricEnrolled}
+                className="w-full min-h-12 rounded-xl bg-secondary text-on-secondary font-body text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">fingerprint</span>
+                Reset PIN via Biometrik
+              </button>
+              <button
+                type="button"
+                onClick={handleResetAppAndPin}
+                className="w-full min-h-12 rounded-xl bg-error-container text-on-error-container font-body text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                Reset Aplikasi & PIN
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForgotPin(false)}
+                className="w-full min-h-12 rounded-xl bg-surface-container-high text-on-surface font-body text-sm font-semibold hover:bg-surface-container-highest cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

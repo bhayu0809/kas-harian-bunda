@@ -66,6 +66,16 @@ async function removeSnapshot(id: string): Promise<void> {
   });
 }
 
+async function clearSnapshots(): Promise<void> {
+  const idb = await openIdb();
+  return new Promise((resolve, reject) => {
+    const tx = idb.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 function sortNewestFirst(a: AutoBackupSnapshot, b: AutoBackupSnapshot): number {
   return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 }
@@ -170,4 +180,8 @@ export async function restoreAutoBackup(id: string): Promise<void> {
 
 export async function deleteAutoBackup(id: string): Promise<void> {
   await removeSnapshot(id);
+}
+
+export async function clearAutoBackups(): Promise<void> {
+  await clearSnapshots();
 }

@@ -11,6 +11,9 @@ const SETTING_PIN_HASH = "pin_hash";
 const SETTING_PIN_SALT = "pin_salt";
 const SETTING_PIN_DEFAULT = "pin_is_default";
 const SETTING_CREDENTIAL = "webauthn_credential_id";
+const LEGACY_DEFAULT_PIN = "1234";
+
+export const PIN_LENGTH = 6;
 
 // --- small encoding helpers ------------------------------------------------
 
@@ -47,7 +50,14 @@ export async function verifyPin(pin: string): Promise<boolean> {
 
 /** Seed the default PIN on first run so the user is never locked out. */
 export async function ensureDefaultPin(): Promise<void> {
-  if (!getSetting(SETTING_PIN_HASH)) await setPin(DEFAULT_PIN, true);
+  if (!getSetting(SETTING_PIN_HASH)) {
+    await setPin(DEFAULT_PIN, true);
+    return;
+  }
+
+  if (isPinDefault() && (await verifyPin(LEGACY_DEFAULT_PIN))) {
+    await setPin(DEFAULT_PIN, true);
+  }
 }
 
 export function isPinDefault(): boolean {

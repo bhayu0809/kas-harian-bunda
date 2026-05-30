@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AutoBackupFrequency, DEFAULT_PROFILE_PHOTO, useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import { PIN_LENGTH } from "@/lib/auth/credentials";
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 })
@@ -84,7 +85,7 @@ export default function PengaturanPage() {
 
   const handleChangePin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^\d{4,6}$/.test(newPin)) return notify("PIN harus 4–6 digit angka.");
+    if (!/^\d{6}$/.test(newPin)) return notify("PIN harus 6 digit angka.");
     if (newPin !== confirmPin) return notify("Konfirmasi PIN tidak cocok.");
     await changePin(newPin);
     setNewPin("");
@@ -293,7 +294,7 @@ export default function PengaturanPage() {
             <div className="mb-6 flex items-center gap-3 bg-tertiary-container text-on-tertiary-container rounded-2xl px-4 py-3">
               <span className="material-symbols-outlined text-[20px]">warning</span>
               <p className="font-body text-xs font-medium">
-                Anda masih memakai PIN default (1234). Sebaiknya ganti sekarang.
+                Anda masih memakai PIN default (123456). Sebaiknya ganti sekarang.
               </p>
             </div>
           )}
@@ -304,9 +305,10 @@ export default function PengaturanPage() {
               <input
                 type="password"
                 inputMode="numeric"
+                maxLength={PIN_LENGTH}
                 value={newPin}
                 onChange={(e) => setNewPin(e.target.value)}
-                placeholder="4–6 digit"
+                placeholder="6 digit"
                 className={inputClass}
               />
             </div>
@@ -315,6 +317,7 @@ export default function PengaturanPage() {
               <input
                 type="password"
                 inputMode="numeric"
+                maxLength={PIN_LENGTH}
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value)}
                 placeholder="Ulangi PIN"

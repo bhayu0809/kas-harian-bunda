@@ -6,7 +6,7 @@ import * as auth from "@/lib/auth/credentials";
 import * as autoBackup from "@/lib/backup/autoBackups";
 import { initDb, resetToDefaults } from "@/lib/db/sqlite";
 import { exportCsv, exportDbFile, importDbFile } from "@/lib/export/exporters";
-import { DEFAULT_DAILY_SPENDING_LIMIT, DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
+import { DEFAULT_DAILY_SPENDING_LIMIT, DEFAULT_PIN, DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
 import { notificationPermission, requestNotificationPermission } from "@/lib/notify";
 import type {
   AutoBackupFrequency,
@@ -37,6 +37,8 @@ interface AppContextType {
   isLoaded: boolean;
   authenticate: (pin: string) => Promise<boolean>;
   unlockBiometric: () => Promise<boolean>;
+  resetPinWithBiometric: () => Promise<boolean>;
+  resetAppAndPin: () => Promise<void>;
   logout: () => void;
   // data
   transactions: Transaction[];
@@ -202,6 +204,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       return false;
     }
+  };
+
+  const resetPinWithBiometric = async () => {
+    try {
+      const ok = await auth.unlockWithBiometric();
+      if (!ok) return false;
+      await auth.setPin(DEFAULT_PIN, true);
+      setPinIsDefault(true);
+      unlock();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const resetAppAndPin = async () => {
+    await resetToDefaults();
+    await autoBackup.clearAutoBackups();
+    await auth.setPin(DEFAULT_PIN, true);
+    await auth.disableBiometric();
+    refreshAll();
+    await refreshAutoBackups();
+    setBiometricEnrolled(false);
+    logout();
   };
 
   const logout = () => {
@@ -375,6 +401,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoaded,
         authenticate,
         unlockBiometric,
+        resetPinWithBiometric,
+        resetAppAndPin,
         logout,
         transactions,
         templates,

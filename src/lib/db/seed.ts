@@ -19,4 +19,4 @@ export const DEFAULT_SAVINGS_TARGET = 0;
 export const DEFAULT_SAVED_AMOUNT = 0;
 export const DEFAULT_MONTHLY_BUDGET = 0; // 0 = pengingat batas pengeluaran mati
 export const DEFAULT_DAILY_SPENDING_LIMIT = 0; // 0 = pengingat batas harian mati
-export const DEFAULT_PIN = "1234";
+export const DEFAULT_PIN = "123456";
