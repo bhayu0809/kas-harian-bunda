@@ -4,7 +4,16 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import * as repo from "@/lib/db/repo";
 import * as auth from "@/lib/auth/credentials";
 import * as autoBackup from "@/lib/backup/autoBackups";
-import { closeDb, initDb, readPlaintextSettings, rekeyDb, resetStorageToDefaults, resetToDefaults } from "@/lib/db/sqlite";
+import {
+  closeDb,
+  hasStoredDb,
+  initDb,
+  readPlaintextSettings,
+  rekeyDb,
+  requestPersistentStorage,
+  resetStorageToDefaults,
+  resetToDefaults,
+} from "@/lib/db/sqlite";
 import { exportCsv, exportEncryptedDbFile, importEncryptedDbFile } from "@/lib/export/exporters";
 import { DEFAULT_DAILY_SPENDING_LIMIT, DEFAULT_PIN, DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
 import { notificationPermission, requestNotificationPermission } from "@/lib/notify";
@@ -35,6 +44,10 @@ interface AppContextType {
   // session
   isAuthenticated: boolean;
   isLoaded: boolean;
+  /** True when the user had set up the app before but the local database blob is
+   *  gone (browser evicted storage). The app reseeds defaults to stay usable,
+   *  but the data should be restored from a backup. */
+  storageEvicted: boolean;
   authenticate: (pin: string) => Promise<boolean>;
   unlockBiometric: () => Promise<boolean>;
   resetPinWithBiometric: () => Promise<boolean>;
@@ -107,6 +120,7 @@ export const DEFAULT_PROFILE_PHOTO =
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [storageEvicted, setStorageEvicted] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
@@ -182,10 +196,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // opened after a successful PIN check.
   useEffect(() => {
     (async () => {
+      // Ask the browser to keep IndexedDB so it isn't evicted under storage
+      // pressure (the silent eviction is what makes settings "reset" on launch).
+      await requestPersistentStorage();
       auth.importLegacyPinSettings(
         await readPlaintextSettings(["pin_hash", "pin_salt", "pin_is_default"])
       );
       await auth.ensureDefaultPin();
+      // Onboarded before but the DB blob is gone => storage was evicted. initDb
+      // will reseed defaults to keep the app usable; flag it so the UI can offer
+      // a restore instead of silently losing the user's data.
+      if (localStorage.getItem("kasharian_onboarded") === "true" && !(await hasStoredDb())) {
+        setStorageEvicted(true);
+      }
       setBiometricAvailable(await auth.isBiometricAvailable());
       setPinIsDefault(auth.isPinDefault());
       setBiometricEnrolled(auth.isBiometricEnrolled());
@@ -463,6 +486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         isAuthenticated,
         isLoaded,
+        storageEvicted,
         authenticate,
         unlockBiometric,
         resetPinWithBiometric,

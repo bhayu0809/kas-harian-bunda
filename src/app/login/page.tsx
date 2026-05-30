@@ -15,6 +15,7 @@ export default function LoginPage() {
     biometricEnrolled,
     isAuthenticated,
     isLoaded,
+    storageEvicted,
   } = useApp();
   const router = useRouter();
   const [pin, setPin] = useState("");
@@ -127,6 +128,16 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
+
+        {/* Storage eviction warning */}
+        {storageEvicted && (
+          <div className="w-full mb-8 flex items-start gap-3 rounded-2xl bg-tertiary-container text-on-tertiary-container px-4 py-3 animate-fade-in">
+            <span className="material-symbols-outlined text-[20px] shrink-0">warning</span>
+            <p className="font-body text-xs font-medium text-left">
+              Data lokal tidak ditemukan — kemungkinan dibersihkan oleh browser. Setelah masuk, pulihkan dari backup lewat menu Pengaturan.
+            </p>
+          </div>
+        )}
 
         {/* PIN Indicator Dots */}
         <div className={`flex justify-center gap-6 mb-12 h-4 ${shake ? "animate-shake" : ""}`}>

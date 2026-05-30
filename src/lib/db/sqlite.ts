@@ -80,6 +80,26 @@ function openIdb(): Promise<IDBDatabase> {
   });
 }
 
+/** Ask the browser to keep our IndexedDB data instead of evicting it under
+ *  storage pressure. Without this the whole encrypted DB blob is "best-effort"
+ *  storage and can be silently dropped — which makes the app reseed defaults on
+ *  the next launch and looks exactly like an unexpected reset. Idempotent. */
+export async function requestPersistentStorage(): Promise<boolean> {
+  try {
+    if (typeof navigator === "undefined" || !navigator.storage?.persist) return false;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch {
+    return false;
+  }
+}
+
+/** Whether a database blob is currently stored. Lets the app tell a genuine
+ *  first run apart from data the browser evicted. */
+export async function hasStoredDb(): Promise<boolean> {
+  return (await loadBytes()) !== null;
+}
+
 async function loadBytes(): Promise<Uint8Array | null> {
   const idb = await openIdb();
   return new Promise((resolve, reject) => {
