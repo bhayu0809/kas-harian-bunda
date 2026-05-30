@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import { getDailyAllowanceStatus, getWeeklySpendingStatus } from "@/lib/budget";
 
 // Format Currency Utility Helper
 const formatRupiah = (value: number) => {
@@ -43,13 +44,19 @@ const formatTxDate = (isoString: string) => {
 };
 
 export default function DashboardPage() {
-  const { 
-    transactions, 
-    categories, 
+  const {
+    transactions,
+    categories,
+    dailySpendingLimit,
+    weeklySpendingLimit,
+    dailyRolloverEnabled,
   } = useApp();
   const router = useRouter();
 
   const now = new Date();
+  const dailyStatus = getDailyAllowanceStatus(transactions, dailySpendingLimit, dailyRolloverEnabled, now);
+  const weeklyStatus = getWeeklySpendingStatus(transactions, weeklySpendingLimit, now);
+  const showLimits = dailySpendingLimit > 0 || weeklySpendingLimit > 0;
   const monthTransactions = transactions.filter((t) => {
     const date = new Date(t.date);
     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
@@ -261,6 +268,128 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Batas Pengeluaran: jatah harian (akumulasi) + mingguan */}
+        {showLimits && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {dailySpendingLimit > 0 && (
+              <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="material-symbols-outlined text-secondary"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      savings
+                    </span>
+                    <h3 className="font-body text-xs font-bold text-on-surface-variant uppercase tracking-wider truncate">
+                      Jatah Harian
+                    </h3>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full font-body ${
+                      dailyStatus.exceeded
+                        ? "bg-error-container text-on-error-container"
+                        : "bg-secondary-container text-on-secondary-container"
+                    }`}
+                  >
+                    {dailyStatus.exceeded ? "Lewat batas" : "Sisa"}
+                  </span>
+                </div>
+                <p
+                  className={`font-headline text-2xl xl:text-3xl font-bold tabular-nums amount ${
+                    dailyStatus.exceeded ? "text-error" : "text-on-surface"
+                  }`}
+                >
+                  {formatRupiah(dailyStatus.remaining)}
+                </p>
+                <p className="font-body text-xs text-on-surface-variant mt-1 font-medium">
+                  Jatah hari ini <span className="amount">{formatRupiah(dailyStatus.effectiveToday)}</span>
+                  {dailyRolloverEnabled && dailyStatus.rollover !== 0 && (
+                    <>
+                      {" "}• akumulasi{" "}
+                      <span className={dailyStatus.rollover < 0 ? "text-error amount" : "text-secondary amount"}>
+                        {dailyStatus.rollover > 0 ? "+" : ""}
+                        {formatRupiah(dailyStatus.rollover)}
+                      </span>
+                    </>
+                  )}
+                </p>
+                <div className="w-full bg-surface-container rounded-full h-2.5 mt-4 mb-2 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      dailyStatus.exceeded ? "bg-error" : "bg-secondary"
+                    }`}
+                    style={{
+                      width: `${
+                        dailyStatus.effectiveToday > 0
+                          ? Math.min(Math.round((dailyStatus.spentToday / dailyStatus.effectiveToday) * 100), 100)
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <p className="font-body text-xs text-on-surface-variant font-medium">
+                  Terpakai hari ini <span className="amount">{formatRupiah(dailyStatus.spentToday)}</span>
+                </p>
+              </div>
+            )}
+
+            {weeklySpendingLimit > 0 && (
+              <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="material-symbols-outlined text-secondary"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      date_range
+                    </span>
+                    <h3 className="font-body text-xs font-bold text-on-surface-variant uppercase tracking-wider truncate">
+                      Batas Mingguan
+                    </h3>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full font-body ${
+                      weeklyStatus.exceeded
+                        ? "bg-error-container text-on-error-container"
+                        : "bg-secondary-container text-on-secondary-container"
+                    }`}
+                  >
+                    {weeklyStatus.exceeded ? "Lewat batas" : "Sisa"}
+                  </span>
+                </div>
+                <p
+                  className={`font-headline text-2xl xl:text-3xl font-bold tabular-nums amount ${
+                    weeklyStatus.exceeded ? "text-error" : "text-on-surface"
+                  }`}
+                >
+                  {formatRupiah(weeklyStatus.remaining)}
+                </p>
+                <p className="font-body text-xs text-on-surface-variant mt-1 font-medium">
+                  Batas minggu ini <span className="amount">{formatRupiah(weeklyStatus.budget)}</span>
+                </p>
+                <div className="w-full bg-surface-container rounded-full h-2.5 mt-4 mb-2 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      weeklyStatus.exceeded ? "bg-error" : "bg-secondary"
+                    }`}
+                    style={{
+                      width: `${
+                        weeklyStatus.budget > 0
+                          ? Math.min(Math.round((weeklyStatus.spent / weeklyStatus.budget) * 100), 100)
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <p className="font-body text-xs text-on-surface-variant font-medium">
+                  Terpakai minggu ini <span className="amount">{formatRupiah(weeklyStatus.spent)}</span>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bottom Section: Transactions */}
         <div className="bg-surface-container-lowest rounded-3xl p-6 md:p-8 shadow-soft border border-surface-container-low">

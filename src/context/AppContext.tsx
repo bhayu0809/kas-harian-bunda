@@ -15,7 +15,14 @@ import {
   resetToDefaults,
 } from "@/lib/db/sqlite";
 import { exportCsv, exportEncryptedDbFile, importEncryptedDbFile } from "@/lib/export/exporters";
-import { DEFAULT_DAILY_SPENDING_LIMIT, DEFAULT_PIN, DEFAULT_SAVED_AMOUNT, DEFAULT_SAVINGS_TARGET } from "@/lib/db/seed";
+import {
+  DEFAULT_DAILY_ROLLOVER,
+  DEFAULT_DAILY_SPENDING_LIMIT,
+  DEFAULT_PIN,
+  DEFAULT_SAVED_AMOUNT,
+  DEFAULT_SAVINGS_TARGET,
+  DEFAULT_WEEKLY_SPENDING_LIMIT,
+} from "@/lib/db/seed";
 import { notificationPermission, requestNotificationPermission } from "@/lib/notify";
 import type {
   AutoBackupFrequency,
@@ -80,6 +87,10 @@ interface AppContextType {
   setMonthlyBudget: (amount: number) => Promise<void>;
   dailySpendingLimit: number;
   setDailySpendingLimit: (amount: number) => Promise<void>;
+  weeklySpendingLimit: number;
+  setWeeklySpendingLimit: (amount: number) => Promise<void>;
+  dailyRolloverEnabled: boolean;
+  setDailyRolloverEnabled: (enabled: boolean) => Promise<void>;
   notifPermission: NotificationPermission | "unsupported";
   enableBudgetAlerts: () => Promise<boolean>;
   // security
@@ -136,6 +147,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [hideAmounts, setHideAmounts] = useState(false);
   const [monthlyBudget, setMonthlyBudgetState] = useState(0);
   const [dailySpendingLimit, setDailySpendingLimitState] = useState(DEFAULT_DAILY_SPENDING_LIMIT);
+  const [weeklySpendingLimit, setWeeklySpendingLimitState] = useState(DEFAULT_WEEKLY_SPENDING_LIMIT);
+  const [dailyRolloverEnabled, setDailyRolloverEnabledState] = useState(DEFAULT_DAILY_ROLLOVER);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [autoBackups, setAutoBackups] = useState<AutoBackupSnapshot[]>([]);
   const [autoBackupEnabledState, setAutoBackupEnabledState] = useState(false);
@@ -156,6 +169,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSavedAmountState(Number(repo.getSetting("saved_amount") ?? DEFAULT_SAVED_AMOUNT));
     setMonthlyBudgetState(Number(repo.getSetting("monthly_budget") ?? 0));
     setDailySpendingLimitState(Number(repo.getSetting("daily_spending_limit") ?? DEFAULT_DAILY_SPENDING_LIMIT));
+    setWeeklySpendingLimitState(Number(repo.getSetting("weekly_spending_limit") ?? DEFAULT_WEEKLY_SPENDING_LIMIT));
+    setDailyRolloverEnabledState((repo.getSetting("daily_rollover") ?? (DEFAULT_DAILY_ROLLOVER ? "1" : "0")) === "1");
     setPinIsDefault(auth.isPinDefault());
     setBiometricEnrolled(auth.isBiometricEnrolled());
     setAutoBackupEnabledState(autoBackup.autoBackupEnabled());
@@ -410,6 +425,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await runAutoBackupIfDue("setting_daily_limit");
   };
 
+  const setWeeklySpendingLimit = async (amount: number) => {
+    setWeeklySpendingLimitState(amount);
+    await repo.setSetting("weekly_spending_limit", String(amount));
+    await runAutoBackupIfDue("setting_weekly_limit");
+  };
+
+  const setDailyRolloverEnabled = async (enabled: boolean) => {
+    setDailyRolloverEnabledState(enabled);
+    await repo.setSetting("daily_rollover", enabled ? "1" : "0");
+    await runAutoBackupIfDue("setting_daily_rollover");
+  };
+
   const enableBudgetAlerts = async () => {
     const granted = await requestNotificationPermission();
     setNotifPermission(notificationPermission());
@@ -525,6 +552,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setMonthlyBudget,
         dailySpendingLimit,
         setDailySpendingLimit,
+        weeklySpendingLimit,
+        setWeeklySpendingLimit,
+        dailyRolloverEnabled,
+        setDailyRolloverEnabled,
         notifPermission,
         enableBudgetAlerts,
         pinIsDefault,

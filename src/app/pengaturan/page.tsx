@@ -58,6 +58,10 @@ export default function PengaturanPage() {
     setMonthlyBudget,
     dailySpendingLimit,
     setDailySpendingLimit,
+    weeklySpendingLimit,
+    setWeeklySpendingLimit,
+    dailyRolloverEnabled,
+    setDailyRolloverEnabled,
     notifPermission,
     enableBudgetAlerts,
   } = useApp();
@@ -67,8 +71,10 @@ export default function PengaturanPage() {
   const [confirmPin, setConfirmPin] = useState("");
   const [budget, setBudget] = useState(monthlyBudget);
   const [dailyLimit, setDailyLimit] = useState(dailySpendingLimit);
+  const [weeklyLimit, setWeeklyLimit] = useState(weeklySpendingLimit);
   const [budgetInput, setBudgetInput] = useState(formatNumberInput(monthlyBudget));
   const [dailyLimitInput, setDailyLimitInput] = useState(formatNumberInput(dailySpendingLimit));
+  const [weeklyLimitInput, setWeeklyLimitInput] = useState(formatNumberInput(weeklySpendingLimit));
   const [profileNameInput, setProfileNameInput] = useState(profileName);
   const [profilePhotoInput, setProfilePhotoInput] = useState(profilePhoto);
   const [toast, setToast] = useState("");
@@ -87,7 +93,9 @@ export default function PengaturanPage() {
     setBudgetInput(formatNumberInput(monthlyBudget));
     setDailyLimit(dailySpendingLimit);
     setDailyLimitInput(formatNumberInput(dailySpendingLimit));
-  }, [monthlyBudget, dailySpendingLimit]);
+    setWeeklyLimit(weeklySpendingLimit);
+    setWeeklyLimitInput(formatNumberInput(weeklySpendingLimit));
+  }, [monthlyBudget, dailySpendingLimit, weeklySpendingLimit]);
 
   const notify = (msg: string) => {
     setToast(msg);
@@ -139,13 +147,30 @@ export default function PengaturanPage() {
     e.preventDefault();
     await setMonthlyBudget(budget);
     await setDailySpendingLimit(dailyLimit);
-    notify(budget > 0 || dailyLimit > 0 ? "Batas pengeluaran disimpan." : "Pengingat pengeluaran dimatikan.");
+    await setWeeklySpendingLimit(weeklyLimit);
+    notify(
+      budget > 0 || dailyLimit > 0 || weeklyLimit > 0
+        ? "Batas pengeluaran disimpan."
+        : "Pengingat pengeluaran dimatikan."
+    );
+  };
+
+  const handleToggleRollover = async () => {
+    const next = !dailyRolloverEnabled;
+    await setDailyRolloverEnabled(next);
+    notify(next ? "Akumulasi jatah harian diaktifkan." : "Akumulasi jatah harian dimatikan.");
   };
 
   const handleDailyLimitInput = (value: string) => {
     const parsed = parseNumberInput(value);
     setDailyLimit(parsed);
     setDailyLimitInput(formatNumberInput(parsed));
+  };
+
+  const handleWeeklyLimitInput = (value: string) => {
+    const parsed = parseNumberInput(value);
+    setWeeklyLimit(parsed);
+    setWeeklyLimitInput(formatNumberInput(parsed));
   };
 
   const handleBudgetInput = (value: string) => {
@@ -404,7 +429,7 @@ export default function PengaturanPage() {
             <h3 className="font-headline text-lg font-bold text-primary">Batas Pengeluaran</h3>
           </div>
           <p className="font-body text-xs text-on-surface-variant mb-6">
-            Tetapkan batas belanja harian dan bulanan untuk pengingat. Dana bulan ini tetap mengikuti pemasukan yang dicatat, sedangkan batas ini hanya dipakai untuk alarm. Setel 0 untuk mematikan batas terkait.
+            Tetapkan batas belanja harian, mingguan, dan bulanan untuk pengingat. Dana bulan ini tetap mengikuti pemasukan yang dicatat, sedangkan batas ini hanya dipakai untuk alarm. Setel 0 untuk mematikan batas terkait.
           </p>
           <form onSubmit={handleSaveBudget} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:items-end mb-6">
             <div className="flex flex-col gap-2">
@@ -422,6 +447,19 @@ export default function PengaturanPage() {
             </div>
             <div className="flex flex-col gap-2">
               <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
+                Batas Mingguan ({formatRupiah(weeklyLimit)})
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={weeklyLimitInput}
+                onChange={(e) => handleWeeklyLimitInput(e.target.value)}
+                placeholder="0"
+                className={inputClass}
+              />
+            </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <label className="font-body text-xs font-bold text-on-surface-variant pl-1">
                 Batas Bulanan ({formatRupiah(budget)})
               </label>
               <input
@@ -437,6 +475,31 @@ export default function PengaturanPage() {
               <button type="submit" className={primaryBtn}>Simpan Batas</button>
             </div>
           </form>
+
+          {/* Akumulasi jatah harian */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pt-6 border-t border-surface-container">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="material-symbols-outlined text-secondary text-[28px]">savings</span>
+              <div className="min-w-0">
+                <p className="font-body text-sm font-semibold text-on-surface">Akumulasi Jatah Harian</p>
+                <p className="font-body text-xs text-on-surface-variant">
+                  Sisa jatah harian yang tak terpakai ditambahkan ke hari berikutnya (reset tiap awal bulan). Acuannya batas harian.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleToggleRollover()}
+              disabled={dailyLimit <= 0}
+              className={`w-full sm:w-auto shrink-0 h-11 px-5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                dailyRolloverEnabled
+                  ? "bg-secondary text-on-secondary hover:opacity-90"
+                  : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
+              }`}
+            >
+              {dailyRolloverEnabled ? "Aktif" : "Nonaktif"}
+            </button>
+          </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-surface-container">
             <div className="flex items-center gap-3 min-w-0">
