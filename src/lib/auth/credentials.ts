@@ -10,6 +10,7 @@ const SETTING_PIN_HASH = "pin_hash";
 const SETTING_PIN_SALT = "pin_salt";
 const SETTING_PIN_DEFAULT = "pin_is_default";
 const SETTING_CREDENTIAL = "webauthn_credential_id";
+const SETTING_BIOMETRIC_PIN = "biometric_pin";
 const SETTING_FAILED_COUNT = "pin_failed_count";
 const SETTING_LOCKED_UNTIL = "pin_locked_until";
 const LEGACY_DEFAULT_PIN = "1234";
@@ -125,6 +126,24 @@ export function isBiometricEnrolled(): boolean {
   return !!getMeta(SETTING_CREDENTIAL);
 }
 
+// The vault is encrypted with the PIN, and a WebAuthn assertion can't reveal it.
+// So to let biometric unlock the vault on a fresh launch (without re-typing the
+// PIN), we stash the PIN locally once biometric is enrolled. The OS biometric
+// prompt remains the gate — same trade-off as the credential being local-only.
+export function setBiometricPin(pin: string): void {
+  setMeta(SETTING_BIOMETRIC_PIN, toBase64(new TextEncoder().encode(pin)));
+}
+
+export function getBiometricPin(): string | null {
+  const stored = getMeta(SETTING_BIOMETRIC_PIN);
+  if (!stored) return null;
+  try {
+    return new TextDecoder().decode(fromBase64(stored));
+  } catch {
+    return null;
+  }
+}
+
 export async function enrollBiometric(): Promise<boolean> {
   const cred = (await navigator.credentials.create({
     publicKey: {
@@ -169,4 +188,5 @@ export async function unlockWithBiometric(): Promise<boolean> {
 
 export async function disableBiometric(): Promise<void> {
   setMeta(SETTING_CREDENTIAL, "");
+  setMeta(SETTING_BIOMETRIC_PIN, "");
 }

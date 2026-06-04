@@ -82,7 +82,11 @@ export default function LoginPage() {
       return;
     }
     const ok = await unlockBiometric();
-    if (ok) router.push("/");
+    // Hard navigation: after the WebAuthn get() the App Router's client-side
+    // router.push("/") gets dropped, so the user would stay on the lock screen
+    // even though the vault unlocked. The session is persisted, so a full
+    // load lands authenticated on the dashboard.
+    if (ok) window.location.assign("/");
     else fail("Biometrik gagal. Gunakan PIN.");
   };
 
@@ -91,7 +95,7 @@ export default function LoginPage() {
     const ok = await resetPinWithBiometric();
     if (ok) {
       alert("PIN berhasil direset ke 123456. Silakan ganti PIN di Pengaturan.");
-      router.push("/");
+      window.location.assign("/"); // hard nav — router.push is dropped post-WebAuthn
     } else {
       fail("Reset PIN via biometrik gagal.");
     }

@@ -287,6 +287,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (ok) {
       await loadVault(pin);
       sessionStorage.setItem(SESSION_PIN_KEY, pin);
+      // Keep the biometric PIN stash in sync (also migrates users who enrolled
+      // before this stash existed, so their next biometric login works).
+      if (auth.isBiometricEnrolled()) auth.setBiometricPin(pin);
       auth.clearPinLockout();
       unlock();
     } else {
@@ -298,13 +301,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const unlockBiometric = async () => {
     try {
       const ok = await auth.unlockWithBiometric();
-      const sessionPin = sessionStorage.getItem(SESSION_PIN_KEY);
-      if (ok && sessionPin) {
-        await loadVault(sessionPin);
-        unlock();
-        return true;
-      }
-      return false;
+      if (!ok) return false;
+      // Use this session's PIN if present, otherwise the one stashed at
+      // enrollment — on a fresh launch sessionStorage is empty, which is exactly
+      // when biometric login matters.
+      const pin = sessionStorage.getItem(SESSION_PIN_KEY) || auth.getBiometricPin();
+      if (!pin) return false;
+      await loadVault(pin);
+      sessionStorage.setItem(SESSION_PIN_KEY, pin);
+      unlock();
+      return true;
     } catch {
       return false;
     }
@@ -314,11 +320,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const ok = await auth.unlockWithBiometric();
       if (!ok) return false;
-      const sessionPin = sessionStorage.getItem(SESSION_PIN_KEY);
-      if (!sessionPin) return false;
-      await loadVault(sessionPin);
+      // Need the current PIN to open the vault before rekeying it to default.
+      const currentPin = sessionStorage.getItem(SESSION_PIN_KEY) || auth.getBiometricPin();
+      if (!currentPin) return false;
+      await loadVault(currentPin);
       await rekeyDb(DEFAULT_PIN);
       await auth.setPin(DEFAULT_PIN, true);
+      auth.setBiometricPin(DEFAULT_PIN);
       sessionStorage.setItem(SESSION_PIN_KEY, DEFAULT_PIN);
       setPinIsDefault(true);
       unlock();
@@ -463,11 +471,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await rekeyDb(pin);
     await auth.setPin(pin, false);
     sessionStorage.setItem(SESSION_PIN_KEY, pin);
+    if (auth.isBiometricEnrolled()) auth.setBiometricPin(pin);
     setPinIsDefault(false);
   };
 
   const enrollBiometric = async () => {
     const ok = await auth.enrollBiometric();
+    if (ok) {
+      // Stash the current PIN so biometric can decrypt the vault on next launch.
+      const sessionPin = sessionStorage.getItem(SESSION_PIN_KEY);
+      if (sessionPin) auth.setBiometricPin(sessionPin);
+    }
     setBiometricEnrolled(auth.isBiometricEnrolled());
     return ok;
   };
