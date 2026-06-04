@@ -195,11 +195,11 @@ function TambahForm() {
     : [{ id: "cat-inc", name: "Pendapatan", description: "Penerimaan masuk", icon: "payments", colorType: "secondary" as const }, ...categories.filter((c) => c.name !== "Pendapatan")];
 
   return (
-    <div className="px-6 md:px-12 pb-12 pt-4 flex-1">
-      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto h-full">
-        
+    <div className="px-4 md:px-12 pb-28 md:pb-12 pt-2 md:pt-4 flex-1">
+      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-8 max-w-7xl mx-auto h-full">
+
         {/* Left Column: Amount & Details (Spans 5 cols) */}
-        <div className="lg:col-span-5 flex flex-col gap-8">
+        <div className="lg:col-span-5 flex flex-col gap-5 md:gap-8">
           {templates.length > 0 && !isEditing && (
             <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-soft">
               <div className="flex items-center justify-between gap-3 mb-4">
@@ -222,7 +222,7 @@ function TambahForm() {
           )}
           
           {/* Amount Input Card */}
-          <div className="bg-surface-container-lowest rounded-[32px] p-8 shadow-lux flex flex-col items-center text-center relative overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-3xl md:rounded-[32px] p-5 md:p-8 shadow-lux flex flex-col items-center text-center relative overflow-hidden">
             {/* Glow effects based on type */}
             <div
               className={`absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 blur-3xl pointer-events-none rounded-full transition-colors duration-300 ${
@@ -231,7 +231,7 @@ function TambahForm() {
             />
             
             {/* Type Toggle */}
-            <div className="bg-surface-container p-1 rounded-full flex w-full max-w-xs mb-8 relative z-10 border border-surface-container-high">
+            <div className="bg-surface-container p-1 rounded-full flex w-full max-w-xs mb-5 md:mb-8 relative z-10 border border-surface-container-high">
               <button
                 type="button"
                 onClick={() => switchType("expense")}
@@ -268,14 +268,14 @@ function TambahForm() {
             </p>
             
             {/* Numeric input field */}
-            <div className="flex items-center justify-center gap-2 w-full mb-8 border-b-2 border-surface-container-highest pb-4 focus-within:border-primary transition-colors">
+            <div className="flex items-center justify-center gap-2 w-full mb-5 md:mb-8 border-b-2 border-surface-container-highest pb-3 md:pb-4 focus-within:border-primary transition-colors">
               <span className="font-headline text-2xl font-bold text-on-surface-variant">Rp</span>
               <input
                 type="text"
                 inputMode="numeric"
                 value={amountInput}
                 onChange={(e) => handleAmountInputChange(e.target.value)}
-                className="bg-transparent border-none p-0 text-center font-headline text-3xl md:text-4xl font-bold text-on-surface w-full max-w-[220px] focus:ring-0 focus:outline-none placeholder-outline-variant"
+                className="bg-transparent border-none p-0 text-center font-headline text-4xl md:text-4xl font-bold text-on-surface w-full max-w-[220px] focus:ring-0 focus:outline-none placeholder-outline-variant"
                 placeholder="0"
               />
             </div>
@@ -301,7 +301,7 @@ function TambahForm() {
           </div>
 
           {/* Label, Date & Note Card */}
-          <div className="bg-surface-container-lowest rounded-3xl p-6 md:p-8 shadow-lux flex flex-col gap-6">
+          <div className="bg-surface-container-lowest rounded-3xl p-5 md:p-8 shadow-lux flex flex-col gap-4 md:gap-6">
             
             {/* Transaction Label Field */}
             <div className="flex flex-col gap-2">
@@ -351,12 +351,12 @@ function TambahForm() {
         </div>
 
         {/* Right Column: Categories & Payment (Spans 7 cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-8">
-          
+        <div className="lg:col-span-7 flex flex-col gap-5 md:gap-8">
+
           {/* Categories Grid Card */}
-          <div className="bg-surface-container-lowest rounded-[32px] p-8 shadow-lux flex-1 flex flex-col justify-between">
+          <div className="bg-surface-container-lowest rounded-3xl md:rounded-[32px] p-5 md:p-8 shadow-lux flex-1 flex flex-col justify-between">
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6 pb-2 border-b border-surface-container">
+              <div className="flex flex-row items-center justify-between gap-2 mb-4 md:mb-6 pb-2 border-b border-surface-container">
                 <h3 className="font-headline text-lg font-bold text-on-surface">
                   Pilih Kategori
                 </h3>
@@ -370,7 +370,7 @@ function TambahForm() {
               </div>
 
               {/* Grid representation */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-3 gap-2.5 md:gap-4">
                 {selectableCategories.map((cat) => {
                   const isActive = category === cat.name;
 
@@ -399,23 +399,23 @@ function TambahForm() {
                       key={cat.id}
                       type="button"
                       onClick={() => setCategory(cat.name)}
-                      className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${catColorClass}`}
+                      className={`flex flex-col items-center gap-2 md:gap-3 p-2.5 md:p-4 rounded-2xl border-2 transition-all cursor-pointer ${catColorClass}`}
                     >
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                        className={`w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors ${
                           isActive
                             ? "bg-white/80 shadow-xs"
                             : "bg-surface-container-highest"
                         }`}
                       >
                         <span
-                          className="material-symbols-outlined text-[24px]"
+                          className="material-symbols-outlined text-[22px] md:text-[24px]"
                           style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                         >
                           {cat.icon}
                         </span>
                       </div>
-                      <span className="font-body text-xs font-semibold text-center truncate w-full">
+                      <span className="font-body text-[11px] md:text-xs font-semibold text-center leading-tight w-full">
                         {cat.name}
                       </span>
                     </button>
@@ -425,11 +425,11 @@ function TambahForm() {
             </div>
 
             {/* Divider */}
-            <div className="my-6 border-t border-surface-container-low" />
+            <div className="my-4 md:my-6 border-t border-surface-container-low" />
 
             {/* Payment Method & Action Row */}
-            <div className="flex flex-col sm:flex-row gap-6 items-stretch">
-              
+            <div className="flex flex-col sm:flex-row gap-4 md:gap-6 items-stretch">
+
               {/* Payment Method */}
               <div className="bg-surface-container-low/50 rounded-2xl p-4 flex-1 flex flex-col justify-center border border-surface-container">
                 <p className="font-body text-xs font-bold text-on-surface-variant mb-3 px-1">
@@ -456,10 +456,10 @@ function TambahForm() {
                 </div>
               </div>
 
-              {/* Save Button */}
+              {/* Save Button (inline — desktop/tablet only; mobile uses sticky bar) */}
               <button
                 type="submit"
-                className="w-full sm:w-[180px] rounded-3xl bg-primary text-on-primary font-headline text-lg font-bold hover:opacity-90 transition-opacity flex flex-col items-center justify-center py-4 sm:py-0 gap-1.5 shadow-lg shadow-primary/10 cursor-pointer"
+                className="hidden md:flex w-full sm:w-[180px] rounded-3xl bg-primary text-on-primary font-headline text-lg font-bold hover:opacity-90 transition-opacity flex-col items-center justify-center py-4 sm:py-0 gap-1.5 shadow-lg shadow-primary/10 cursor-pointer"
               >
                 <span
                   className="material-symbols-outlined text-2xl"
@@ -494,6 +494,34 @@ function TambahForm() {
               </div>
             )}
 
+          </div>
+        </div>
+
+        {/* Sticky action bar (mobile only) — Simpan always reachable without scrolling to the bottom */}
+        <div
+          className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-surface-container-lowest/95 backdrop-blur-sm border-t border-surface-container px-4 pt-3 shadow-[0_-8px_30px_-12px_rgba(93,92,86,0.18)]"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+        >
+          <div className="flex gap-3 max-w-7xl mx-auto">
+            <button
+              type="button"
+              onClick={() => router.push(isEditing ? "/riwayat" : "/")}
+              className="shrink-0 px-5 rounded-2xl bg-surface-container-high text-on-surface font-body text-sm font-semibold active:scale-95 transition-transform cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="flex-1 rounded-2xl bg-primary text-on-primary font-headline text-base font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 py-3.5 shadow-lg shadow-primary/10 cursor-pointer"
+            >
+              <span
+                className="material-symbols-outlined text-[22px]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                check_circle
+              </span>
+              {isEditing ? "Perbarui" : "Simpan"}
+            </button>
           </div>
         </div>
 

@@ -67,6 +67,7 @@ export default function PengaturanPage() {
     setCategoryBudget,
     notifPermission,
     enableBudgetAlerts,
+    logout,
   } = useApp();
   const router = useRouter();
 
@@ -790,6 +791,32 @@ export default function PengaturanPage() {
             <button onClick={handleShowIntro} className={secondaryActionBtn}>
               <span className="material-symbols-outlined text-[20px]">slideshow</span>
               Lihat Intro Lagi
+            </button>
+          </div>
+        </section>
+
+        {/* Akun & Navigasi */}
+        <section className={cardClass}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+              <span className="material-symbols-outlined">manage_accounts</span>
+            </div>
+            <h3 className="font-headline text-lg font-bold text-primary">Akun &amp; Navigasi</h3>
+          </div>
+          <p className="font-body text-xs text-on-surface-variant mb-6">
+            Kelola kategori pengeluaran atau keluar dari sesi ini.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button onClick={() => router.push("/kategori")} className={secondaryActionBtn}>
+              <span className="material-symbols-outlined text-[20px]">category</span>
+              Kelola Kategori
+            </button>
+            <button
+              onClick={logout}
+              className="min-h-12 w-full sm:w-auto px-5 bg-error-container text-on-error-container rounded-xl font-body text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-center"
+            >
+              <span className="material-symbols-outlined text-[20px]">logout</span>
+              Keluar Sesi
             </button>
           </div>
         </section>

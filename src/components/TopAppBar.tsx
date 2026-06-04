@@ -4,11 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 
-interface TopAppBarProps {
-  onMenuClick: () => void;
-}
-
-export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
+export default function TopAppBar() {
   const pathname = usePathname();
   const { hideAmounts, toggleHideAmounts, profileName, profilePhoto } = useApp();
 
@@ -40,21 +36,22 @@ export default function TopAppBar({ onMenuClick }: TopAppBarProps) {
   }
 
   return (
-    <header className="w-full min-h-24 sticky top-0 z-40 bg-surface flex justify-between items-center gap-3 px-4 md:px-12 py-5 md:py-6 ml-auto">
+    <header className="w-full min-h-16 md:min-h-24 sticky top-0 z-40 bg-surface/95 backdrop-blur-sm flex justify-between items-center gap-3 px-4 md:px-12 py-3 md:py-6 ml-auto">
       <div className="flex items-center gap-3 md:gap-4 min-w-0">
-        {/* Mobile menu trigger */}
-        <button
-          aria-label="Menu"
-          onClick={onMenuClick}
-          className="md:hidden p-2 rounded-full hover:bg-surface-container text-primary transition-colors cursor-pointer shrink-0"
-        >
-          <span className="material-symbols-outlined text-[28px]">menu</span>
-        </button>
+        {/* App mark (mobile) */}
+        <div className="md:hidden w-9 h-9 rounded-xl bg-secondary-container flex items-center justify-center shrink-0">
+          <span
+            className="material-symbols-outlined text-on-secondary-container text-[20px]"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            account_balance_wallet
+          </span>
+        </div>
         <div className="min-w-0">
-          <h2 className="font-headline text-xl md:text-2xl font-bold text-primary leading-tight truncate">
+          <h2 className="font-headline text-lg md:text-2xl font-bold text-primary leading-tight truncate">
             {title}
           </h2>
-          <p className="font-body text-xs md:text-sm text-on-surface-variant line-clamp-2">
+          <p className="hidden sm:block font-body text-xs md:text-sm text-on-surface-variant line-clamp-1">
             {subtitle}
           </p>
         </div>
