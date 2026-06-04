@@ -135,6 +135,19 @@ function TambahForm() {
     setCategory(nextType === "income" ? "Pendapatan" : "Belanja Dapur");
   };
 
+  // Open the native date picker from the chip. showPicker() is the reliable way
+  // to trigger it from custom UI; the overlay-input trick flickered on mobile
+  // (the transparent input grabbed the tap, then blur/scroll closed the picker).
+  const openDatePicker = () => {
+    const el = dateInputRef.current;
+    if (!el) return;
+    try {
+      el.showPicker();
+    } catch {
+      el.focus();
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount <= 0) {
@@ -335,18 +348,25 @@ function TambahForm() {
             <button type="button" onClick={() => setDate(yesterdayStr)} className={dateChip(isYesterday)}>
               Kemarin
             </button>
-            {/* Custom date: transparent native picker overlays a chip */}
+            {/* Custom date: a real button opens the native picker via showPicker();
+                the input is pointer-events-none so it never intercepts the tap. */}
             <div className="relative shrink-0">
-              <span className={`${dateChip(isCustomDate)} block`}>
+              <button
+                type="button"
+                onClick={openDatePicker}
+                className={`${dateChip(isCustomDate)} flex items-center gap-1`}
+              >
+                <span className="material-symbols-outlined text-[16px]">calendar_month</span>
                 {isCustomDate ? formatShortDate(date) : "Pilih"}
-              </span>
+              </button>
               <input
                 ref={dateInputRef}
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 aria-label="Pilih tanggal"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                tabIndex={-1}
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-px h-px opacity-0 pointer-events-none"
               />
             </div>
           </div>
