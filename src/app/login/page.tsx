@@ -214,16 +214,6 @@ export default function LoginPage() {
 
         {/* Actions */}
         <div className="w-full flex flex-col items-center space-y-2 md:space-y-3">
-          {showBiometric && (
-            <button
-              onClick={handleBiometric}
-              type="button"
-              className="w-full max-w-xs h-12 md:h-16 bg-secondary-container text-on-secondary-container font-body text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined">fingerprint</span>
-              {biometricEnrolled ? "Buka dengan Sidik Jari / Face ID" : "Biometrik Belum Aktif"}
-            </button>
-          )}
           <button
             onClick={() => submitPin(pin)}
             disabled={pin.length < PIN_LENGTH}
