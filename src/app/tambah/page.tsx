@@ -44,10 +44,10 @@ function TambahForm() {
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [repeatMonthly, setRepeatMonthly] = useState(false);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
-  // On mobile the secondary fields (label, date, notes, sumber dana, opsi)
-  // start collapsed so the core entry — nominal + kategori + simpan — fits on
-  // one screen without scrolling for fast repeated logging.
-  const [showDetails, setShowDetails] = useState<boolean>(false);
+  // Secondary fields (label, date, notes, sumber dana, opsi) live in a modal so
+  // the main entry — nominal + kategori + simpan — always fits one screen
+  // without page scrolling, on every device size.
+  const [detailOpen, setDetailOpen] = useState<boolean>(false);
 
   // Update type state if searchParams change
   useEffect(() => {
@@ -79,7 +79,6 @@ function TambahForm() {
       setSource(sourceTx.source);
       setSaveAsTemplate(false);
       setRepeatMonthly(false);
-      setShowDetails(true);
       return;
     }
 
@@ -93,7 +92,6 @@ function TambahForm() {
       setSource(selectedTemplate.source);
       setSaveAsTemplate(false);
       setRepeatMonthly(false);
-      setShowDetails(true);
     }
   }, [editTx, duplicateTx, selectedTemplate, isEditing]);
 
@@ -200,144 +198,126 @@ function TambahForm() {
     ? categories.filter((c) => c.name !== "Pendapatan")
     : [{ id: "cat-inc", name: "Pendapatan", description: "Penerimaan masuk", icon: "payments", colorType: "secondary" as const }, ...categories.filter((c) => c.name !== "Pendapatan")];
 
-  return (
-    <div className="px-4 md:px-12 pb-28 lg:pb-12 pt-2 md:pt-4 flex-1">
-      <form onSubmit={handleSave} className="max-w-7xl mx-auto">
+  // Whether the user has set anything beyond the defaults — drives the dot on
+  // the "Detail" button so they know extra info is attached.
+  const hasDetail =
+    label.trim() !== "" || notes.trim() !== "" || source !== "Transfer" || saveAsTemplate || repeatMonthly;
 
-        {/* Quick templates (full width) */}
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <form
+        onSubmit={handleSave}
+        className="flex-1 min-h-0 flex flex-col gap-3 md:gap-4 w-full max-w-2xl mx-auto px-4 md:px-6 pt-2 md:pt-4 pb-3 md:pb-6"
+      >
+        {/* Quick templates (compact chips) */}
         {templates.length > 0 && !isEditing && (
-          <div className="bg-surface-container-lowest rounded-3xl p-4 md:p-5 shadow-soft mb-5 md:mb-8">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h3 className="font-headline text-sm font-bold text-primary">Template Cepat</h3>
-              <span className="font-body text-[11px] font-semibold text-on-surface-variant">{templates.length} tersimpan</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => router.push(`/tambah?template=${template.id}`)}
-                  className="shrink-0 rounded-full bg-surface-container-low px-4 py-2 font-body text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
-                >
-                  {template.label}
-                </button>
-              ))}
-            </div>
+          <div className="shrink-0 flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
+            {templates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => router.push(`/tambah?template=${template.id}`)}
+                className="shrink-0 rounded-full bg-surface-container-low px-4 py-2 font-body text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+              >
+                {template.label}
+              </button>
+            ))}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
+        {/* Amount Input Card */}
+        <div className="shrink-0 bg-surface-container-lowest rounded-3xl p-4 md:p-6 shadow-lux flex flex-col items-center text-center relative overflow-hidden">
+          {/* Glow effects based on type */}
+          <div
+            className={`absolute top-0 left-1/2 -translate-x-1/2 w-full h-24 blur-3xl pointer-events-none rounded-full transition-colors duration-300 ${
+              isExpense ? "bg-error-container/20" : "bg-secondary-container/30"
+            }`}
+          />
 
-          {/* Amount Input Card (left on desktop) */}
-          <div className="lg:col-start-1 lg:col-span-5 lg:row-start-1 lg:self-start bg-surface-container-lowest rounded-3xl md:rounded-[32px] p-4 md:p-8 shadow-lux flex flex-col items-center text-center relative overflow-hidden">
-            {/* Glow effects based on type */}
-            <div
-              className={`absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 blur-3xl pointer-events-none rounded-full transition-colors duration-300 ${
-                isExpense ? "bg-error-container/20" : "bg-secondary-container/30"
-              }`}
-            />
-
-            {/* Type Toggle */}
-            <div className="bg-surface-container p-1 rounded-full flex w-full max-w-xs mb-4 md:mb-8 relative z-10 border border-surface-container-high">
-              <button
-                type="button"
-                onClick={() => switchType("expense")}
-                className={`flex-1 py-2.5 md:py-3 px-3 rounded-full font-body text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
-                  isExpense
-                    ? "bg-error-container text-on-error-container shadow-sm scale-95"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <span
-                  className="material-symbols-outlined text-[18px]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  arrow_downward
-                </span>
-                Pengeluaran
-              </button>
-              <button
-                type="button"
-                onClick={() => switchType("income")}
-                className={`flex-1 py-2.5 md:py-3 px-3 rounded-full font-body text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
-                  !isExpense
-                    ? "bg-secondary-container text-on-secondary-container shadow-sm scale-95"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
-                Pemasukan
-              </button>
-            </div>
-
-            <p className="font-body text-[11px] md:text-xs font-bold text-on-surface-variant mb-1 md:mb-2">
-              Nominal Transaksi
-            </p>
-
-            {/* Numeric input field */}
-            <div className="flex items-center justify-center gap-2 w-full mb-4 md:mb-8 border-b-2 border-surface-container-highest pb-2.5 md:pb-4 focus-within:border-primary transition-colors">
-              <span className="font-headline text-2xl font-bold text-on-surface-variant">Rp</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={amountInput}
-                onChange={(e) => handleAmountInputChange(e.target.value)}
-                className="bg-transparent border-none p-0 text-center font-headline text-4xl font-bold text-on-surface w-full max-w-[220px] focus:ring-0 focus:outline-none placeholder-outline-variant"
-                placeholder="0"
-              />
-            </div>
-
-            {/* Shortcuts */}
-            <div className="flex flex-wrap justify-center gap-2 md:gap-3 w-full relative z-10">
-              {[
-                { label: "+10k", value: 10000 },
-                { label: "+20k", value: 20000 },
-                { label: "+50k", value: 50000 },
-                { label: "+100k", value: 100000 },
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => handleShorthandAmount(item.value)}
-                  className="py-2 px-3.5 md:px-4 rounded-full border border-outline-variant text-on-surface-variant font-body text-xs font-medium hover:bg-surface-container hover:border-outline transition-colors cursor-pointer"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Save Button — desktop only (fills the tall left column; mobile/tablet use the sticky bar) */}
+          {/* Type Toggle */}
+          <div className="bg-surface-container p-1 rounded-full flex w-full max-w-xs mb-3 md:mb-5 relative z-10 border border-surface-container-high">
             <button
-              type="submit"
-              className="hidden lg:flex lg:mt-8 w-full rounded-2xl bg-primary text-on-primary font-headline text-base font-bold hover:opacity-90 transition-opacity items-center justify-center py-4 gap-2 shadow-lg shadow-primary/10 cursor-pointer relative z-10"
+              type="button"
+              onClick={() => switchType("expense")}
+              className={`flex-1 py-2.5 px-3 rounded-full font-body text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+                isExpense
+                  ? "bg-error-container text-on-error-container shadow-sm scale-95"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
             >
               <span
-                className="material-symbols-outlined text-2xl"
+                className="material-symbols-outlined text-[18px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
-                check_circle
+                arrow_downward
               </span>
-              {isEditing ? "Perbarui" : "Simpan"}
+              Pengeluaran
+            </button>
+            <button
+              type="button"
+              onClick={() => switchType("income")}
+              className={`flex-1 py-2.5 px-3 rounded-full font-body text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+                !isExpense
+                  ? "bg-secondary-container text-on-secondary-container shadow-sm scale-95"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
+              Pemasukan
             </button>
           </div>
 
-          {/* Categories Grid Card (top-right on desktop) */}
-          <div className="lg:col-start-6 lg:col-span-7 lg:row-start-1 bg-surface-container-lowest rounded-3xl md:rounded-[32px] p-4 md:p-8 shadow-lux">
-            <div className="flex flex-row items-center justify-between gap-2 mb-3 md:mb-6 pb-2 border-b border-surface-container">
-              <h3 className="font-headline text-base md:text-lg font-bold text-on-surface">
-                Pilih Kategori
-              </h3>
-              <button
-                type="button"
-                onClick={() => router.push("/kategori")}
-                className="text-secondary font-body text-xs font-semibold hover:underline cursor-pointer"
-              >
-                Kelola Kategori
-              </button>
-            </div>
+          {/* Numeric input field */}
+          <div className="flex items-center justify-center gap-2 w-full mb-3 md:mb-4 border-b-2 border-surface-container-highest pb-2 md:pb-3 focus-within:border-primary transition-colors">
+            <span className="font-headline text-2xl font-bold text-on-surface-variant">Rp</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={amountInput}
+              onChange={(e) => handleAmountInputChange(e.target.value)}
+              className="bg-transparent border-none p-0 text-center font-headline text-4xl font-bold text-on-surface w-full max-w-[220px] focus:ring-0 focus:outline-none placeholder-outline-variant"
+              placeholder="0"
+            />
+          </div>
 
-            {/* Grid representation */}
-            <div className="grid grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-4">
+          {/* Shortcuts */}
+          <div className="flex flex-wrap justify-center gap-2 w-full relative z-10">
+            {[
+              { label: "+10k", value: 10000 },
+              { label: "+20k", value: 20000 },
+              { label: "+50k", value: 50000 },
+              { label: "+100k", value: 100000 },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => handleShorthandAmount(item.value)}
+                className="py-1.5 px-3.5 rounded-full border border-outline-variant text-on-surface-variant font-body text-xs font-medium hover:bg-surface-container hover:border-outline transition-colors cursor-pointer"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Categories Card — fills remaining height, scrolls internally so the page never scrolls */}
+        <div className="flex-1 min-h-0 bg-surface-container-lowest rounded-3xl p-4 md:p-6 shadow-lux flex flex-col">
+          <div className="shrink-0 flex items-center justify-between gap-2 mb-3 pb-2 border-b border-surface-container">
+            <h3 className="font-headline text-base md:text-lg font-bold text-on-surface">
+              Pilih Kategori
+            </h3>
+            <button
+              type="button"
+              onClick={() => router.push("/kategori")}
+              className="text-secondary font-body text-xs font-semibold hover:underline cursor-pointer"
+            >
+              Kelola Kategori
+            </button>
+          </div>
+
+          {/* Scrollable grid */}
+          <div className="flex-1 min-h-0 overflow-y-auto -mr-1 pr-1 scrollbar-hide">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 md:gap-3">
               {selectableCategories.map((cat) => {
                 const isActive = category === cat.name;
 
@@ -366,7 +346,7 @@ function TambahForm() {
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.name)}
-                    className={`flex flex-col items-center gap-1.5 md:gap-3 p-2 md:p-4 rounded-2xl border-2 transition-all cursor-pointer ${catColorClass}`}
+                    className={`flex flex-col items-center gap-1.5 md:gap-2 p-2 md:p-3 rounded-2xl border-2 transition-all cursor-pointer ${catColorClass}`}
                   >
                     <div
                       className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors ${
@@ -390,159 +370,166 @@ function TambahForm() {
               })}
             </div>
           </div>
+        </div>
 
-          {/* Detail toggle (mobile only) */}
+        {/* Action row — Detail (opens modal) + Simpan, always visible */}
+        <div className="shrink-0 flex gap-2.5">
           <button
             type="button"
-            onClick={() => setShowDetails((v) => !v)}
-            className="lg:hidden flex items-center justify-between gap-2 rounded-2xl bg-surface-container-lowest px-5 py-3.5 shadow-soft text-on-surface cursor-pointer"
+            onClick={() => setDetailOpen(true)}
+            className="relative shrink-0 flex items-center justify-center gap-2 rounded-2xl bg-surface-container-high text-on-surface px-4 md:px-5 py-3.5 font-body text-sm font-semibold active:scale-95 transition-transform cursor-pointer"
           >
-            <span className="flex items-center gap-2 font-body text-sm font-semibold">
-              <span className="material-symbols-outlined text-[20px] text-on-surface-variant">tune</span>
-              {showDetails ? "Sembunyikan detail" : "Detail lainnya"}
-            </span>
-            <span className="flex items-center gap-2">
-              {!showDetails && (
-                <span className="font-body text-[11px] text-on-surface-variant truncate max-w-[120px]">
-                  Nama, tanggal, catatan
-                </span>
-              )}
-              <span
-                className="material-symbols-outlined text-[22px] text-on-surface-variant transition-transform"
-                style={{ transform: showDetails ? "rotate(180deg)" : "none" }}
-              >
-                expand_more
-              </span>
-            </span>
-          </button>
-
-          {/* Secondary details (bottom-right on desktop; collapsible on mobile) */}
-          <div
-            className={`lg:col-start-6 lg:col-span-7 lg:row-start-2 ${
-              showDetails ? "flex" : "hidden"
-            } lg:flex flex-col gap-4 md:gap-6 bg-surface-container-lowest rounded-3xl md:rounded-[32px] p-4 md:p-8 shadow-lux`}
-          >
-            {/* Transaction Label Field */}
-            <div className="flex flex-col gap-2">
-              <label className="font-body text-xs font-bold text-on-surface-variant pl-2">
-                Nama Transaksi (Opsional)
-              </label>
-              <input
-                type="text"
-                placeholder="misal: Belanja Sayur Bulanan"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors"
-              />
-            </div>
-
-            {/* Date Picker Field */}
-            <div className="flex flex-col gap-2">
-              <label className="font-body text-xs font-bold text-on-surface-variant pl-2">
-                Tanggal Transaksi
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors"
-              />
-            </div>
-
-            {/* Notes Field */}
-            <div className="flex flex-col gap-2">
-              <label className="font-body text-xs font-bold text-on-surface-variant pl-2">
-                Catatan Tambahan (Opsional)
-              </label>
-              <textarea
-                placeholder="Tulis rincian transaksi di sini..."
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors placeholder-outline-variant resize-none"
-              />
-            </div>
-
-            {/* Payment Method */}
-            <div className="flex flex-col gap-2">
-              <p className="font-body text-xs font-bold text-on-surface-variant pl-2">
-                Sumber Dana
-              </p>
-              <div className="flex gap-2">
-                {(["Tunai", "Transfer", "E-Wallet"] as const).map((method) => {
-                  const isSelected = source === method;
-                  return (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setSource(method)}
-                      className={`flex-1 py-3 px-1.5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer border ${
-                        isSelected
-                          ? "bg-primary text-on-primary border-primary shadow-sm"
-                          : "bg-surface-container-lowest text-on-surface border-outline-variant hover:bg-surface-container-high"
-                      }`}
-                    >
-                      {method}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {!isEditing && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3.5 md:p-4 font-body text-xs font-semibold text-on-surface-variant cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={saveAsTemplate}
-                    onChange={(e) => setSaveAsTemplate(e.target.checked)}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  Simpan sebagai template
-                </label>
-                <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3.5 md:p-4 font-body text-xs font-semibold text-on-surface-variant cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={repeatMonthly}
-                    onChange={(e) => setRepeatMonthly(e.target.checked)}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  Ulangi tiap bulan
-                </label>
-              </div>
+            <span className="material-symbols-outlined text-[20px]">tune</span>
+            <span>Detail</span>
+            {hasDetail && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-secondary" />
             )}
-          </div>
-        </div>
-
-        {/* Sticky action bar (mobile + tablet) — Simpan always reachable without scrolling to the bottom */}
-        <div
-          className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-surface-container-lowest/95 backdrop-blur-sm border-t border-surface-container px-4 pt-3 shadow-[0_-8px_30px_-12px_rgba(93,92,86,0.18)]"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
-        >
-          <div className="flex gap-3 max-w-7xl mx-auto">
-            <button
-              type="button"
-              onClick={() => router.push(isEditing ? "/riwayat" : "/")}
-              className="shrink-0 px-5 rounded-2xl bg-surface-container-high text-on-surface font-body text-sm font-semibold active:scale-95 transition-transform cursor-pointer"
+          </button>
+          <button
+            type="submit"
+            className="flex-1 rounded-2xl bg-primary text-on-primary font-headline text-base font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 py-3.5 shadow-lg shadow-primary/10 cursor-pointer"
+          >
+            <span
+              className="material-symbols-outlined text-[22px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
             >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="flex-1 rounded-2xl bg-primary text-on-primary font-headline text-base font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 py-3.5 shadow-lg shadow-primary/10 cursor-pointer"
-            >
-              <span
-                className="material-symbols-outlined text-[22px]"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
-              {isEditing ? "Perbarui" : "Simpan"}
-            </button>
-          </div>
+              check_circle
+            </span>
+            {isEditing ? "Perbarui" : "Simpan"}
+          </button>
         </div>
-
       </form>
+
+      {/* Detail modal — secondary fields, all sizes. Bottom-sheet on mobile, dialog on sm+. */}
+      {detailOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            onClick={() => setDetailOpen(false)}
+            className="absolute inset-0 bg-on-background/40 backdrop-blur-xs animate-fade-in"
+          />
+          <div className="relative w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88dvh] flex flex-col animate-scale-up">
+            {/* Header */}
+            <div className="shrink-0 flex items-center justify-between gap-3 px-5 md:px-6 py-4 border-b border-surface-container">
+              <h3 className="font-headline text-lg font-bold text-on-surface">Detail Transaksi</h3>
+              <button
+                type="button"
+                onClick={() => setDetailOpen(false)}
+                aria-label="Tutup"
+                className="p-2 -mr-2 rounded-full hover:bg-surface-container text-on-surface-variant cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Body (scrolls if tall) */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-5 flex flex-col gap-4">
+              {/* Transaction Label Field */}
+              <div className="flex flex-col gap-2">
+                <label className="font-body text-xs font-bold text-on-surface-variant pl-2">
+                  Nama Transaksi (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="misal: Belanja Sayur Bulanan"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors"
+                />
+              </div>
+
+              {/* Date Picker Field */}
+              <div className="flex flex-col gap-2">
+                <label className="font-body text-xs font-bold text-on-surface-variant pl-2">
+                  Tanggal Transaksi
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors"
+                />
+              </div>
+
+              {/* Notes Field */}
+              <div className="flex flex-col gap-2">
+                <label className="font-body text-xs font-bold text-on-surface-variant pl-2">
+                  Catatan Tambahan (Opsional)
+                </label>
+                <textarea
+                  placeholder="Tulis rincian transaksi di sini..."
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors placeholder-outline-variant resize-none"
+                />
+              </div>
+
+              {/* Payment Method */}
+              <div className="flex flex-col gap-2">
+                <p className="font-body text-xs font-bold text-on-surface-variant pl-2">
+                  Sumber Dana
+                </p>
+                <div className="flex gap-2">
+                  {(["Tunai", "Transfer", "E-Wallet"] as const).map((method) => {
+                    const isSelected = source === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setSource(method)}
+                        className={`flex-1 py-3 px-1.5 rounded-xl font-body text-xs font-bold transition-all cursor-pointer border ${
+                          isSelected
+                            ? "bg-primary text-on-primary border-primary shadow-sm"
+                            : "bg-surface-container-lowest text-on-surface border-outline-variant hover:bg-surface-container-high"
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {!isEditing && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3.5 md:p-4 font-body text-xs font-semibold text-on-surface-variant cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={saveAsTemplate}
+                      onChange={(e) => setSaveAsTemplate(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    Simpan sebagai template
+                  </label>
+                  <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3.5 md:p-4 font-body text-xs font-semibold text-on-surface-variant cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={repeatMonthly}
+                      onChange={(e) => setRepeatMonthly(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    Ulangi tiap bulan
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div
+              className="shrink-0 px-5 md:px-6 py-4 border-t border-surface-container"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+            >
+              <button
+                type="button"
+                onClick={() => setDetailOpen(false)}
+                className="w-full rounded-2xl bg-primary text-on-primary font-headline text-base font-bold py-3.5 active:scale-[0.98] transition-transform cursor-pointer"
+              >
+                Selesai
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Post transaction addition feedback */}
       <SuccessModal

@@ -19,10 +19,6 @@ export default function BottomNavBar() {
 
   const isAddActive = pathname === "/tambah";
 
-  // The Tambah screen shows its own sticky Save/Batal action bar on mobile,
-  // so the bottom nav would only get in the way there.
-  if (isAddActive) return null;
-
   const renderItem = (item: { name: string; icon: string; path: string }) => {
     const isActive = pathname === item.path;
     return (

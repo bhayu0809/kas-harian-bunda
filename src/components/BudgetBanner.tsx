@@ -1,11 +1,16 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useBudgetAlert } from "@/hooks/useBudgetAlert";
 
 // In-app warning shown across dashboard pages when monthly spending is on pace
 // to exhaust the budget before month-end (or has already exceeded it).
 export default function BudgetBanner() {
+  const pathname = usePathname();
   const { visible, message, exceeded, dismiss } = useBudgetAlert();
+  // The Tambah screen is a fixed-height, no-scroll entry form — keep the banner
+  // off it so it doesn't push the layout and force scrolling.
+  if (pathname === "/tambah") return null;
   if (!visible) return null;
 
   return (
