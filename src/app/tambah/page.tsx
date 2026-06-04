@@ -1,11 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp, TransactionType, TransactionSource } from "@/context/AppContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import SuccessModal from "@/components/SuccessModal";
 import { formatNumberInput, parseNumberInput } from "@/lib/numberInput";
+
+// Local YYYY-MM-DD (avoids the UTC shift that toISOString can introduce).
+const toDateValue = (d: Date) => {
+  const tz = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tz).toISOString().substring(0, 10);
+};
+
+// Short, friendly label for a YYYY-MM-DD string, e.g. "4 Jun 2026".
+const formatShortDate = (value: string) =>
+  new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" })
+    .format(new Date(`${value}T00:00:00`));
 
 function TambahForm() {
   const {
@@ -48,6 +59,7 @@ function TambahForm() {
   // the main entry — nominal + kategori + simpan — always fits one screen
   // without page scrolling, on every device size.
   const [detailOpen, setDetailOpen] = useState<boolean>(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Update type state if searchParams change
   useEffect(() => {
@@ -203,6 +215,19 @@ function TambahForm() {
   const hasDetail =
     label.trim() !== "" || notes.trim() !== "" || source !== "Transfer" || saveAsTemplate || repeatMonthly;
 
+  // Date quick-select — kept on the main form (date is a "verify" field).
+  const todayStr = toDateValue(new Date());
+  const yesterdayStr = toDateValue(new Date(Date.now() - 86400000));
+  const isToday = date === todayStr;
+  const isYesterday = date === yesterdayStr;
+  const isCustomDate = !isToday && !isYesterday;
+  const dateChip = (active: boolean) =>
+    `shrink-0 rounded-full px-3.5 py-1.5 font-body text-xs font-bold transition-colors cursor-pointer ${
+      active
+        ? "bg-secondary-container text-on-secondary-container"
+        : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+    }`;
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <form
@@ -297,6 +322,33 @@ function TambahForm() {
                 {item.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Date quick-select — visible on the main form, defaults to today */}
+        <div className="shrink-0 bg-surface-container-lowest rounded-2xl px-3.5 py-2.5 shadow-soft flex items-center gap-2">
+          <span className="material-symbols-outlined text-[20px] text-on-surface-variant shrink-0">event</span>
+          <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <button type="button" onClick={() => setDate(todayStr)} className={dateChip(isToday)}>
+              Hari ini
+            </button>
+            <button type="button" onClick={() => setDate(yesterdayStr)} className={dateChip(isYesterday)}>
+              Kemarin
+            </button>
+            {/* Custom date: transparent native picker overlays a chip */}
+            <div className="relative shrink-0">
+              <span className={`${dateChip(isCustomDate)} block`}>
+                {isCustomDate ? formatShortDate(date) : "Pilih"}
+              </span>
+              <input
+                ref={dateInputRef}
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-label="Pilih tanggal"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
           </div>
         </div>
 
@@ -433,19 +485,6 @@ function TambahForm() {
                   placeholder="misal: Belanja Sayur Bulanan"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors"
-                />
-              </div>
-
-              {/* Date Picker Field */}
-              <div className="flex flex-col gap-2">
-                <label className="font-body text-xs font-bold text-on-surface-variant pl-2">
-                  Tanggal Transaksi
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
                   className="w-full rounded-2xl border-2 border-surface-container-highest bg-surface-container-low p-3.5 md:p-4 font-body text-sm text-on-surface focus:outline-none focus:border-outline focus:ring-0 transition-colors"
                 />
               </div>
